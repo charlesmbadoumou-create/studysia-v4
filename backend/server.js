@@ -122,7 +122,9 @@ app.get("/api/institutions/:id", (req, res) => {
 
 app.post("/api/institutions", authRequired, adminOnly, (req, res) => {
   const { name, handle, city, country, address, contact, whatsapp, logo_url } = req.body || {};
-  if (!name) return res.status(400).json({ error: "Name required" });
+  if (!name || !city || !country) {
+    return res.status(400).json({ error: "Name, city and country are required" });
+  }
   const stmt = db.prepare(
     "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, created_at) VALUES (?,?,?,?,?,?,?,?,?)"
   );
@@ -135,6 +137,9 @@ app.post("/api/institutions", authRequired, adminOnly, (req, res) => {
 app.put("/api/institutions/:id", authRequired, adminOnly, (req, res) => {
   const id = Number(req.params.id);
   const { name, handle, city, country, address, contact, whatsapp, logo_url } = req.body || {};
+  if (!name || !city || !country) {
+    return res.status(400).json({ error: "Name, city and country are required" });
+  }
   db.run(
     "UPDATE institutions SET name=?, handle=?, city=?, country=?, address=?, contact=?, whatsapp=?, logo_url=? WHERE id=?",
     [name, handle, city, country, address, contact, whatsapp, logo_url, id],
@@ -177,7 +182,9 @@ app.post("/api/programs", authRequired, adminOnly, (req, res) => {
     image_url,
   } = req.body || {};
 
-  if (!institution_id || !title) return res.status(400).json({ error: "Missing fields" });
+  if (!institution_id || !title || !admission) {
+    return res.status(400).json({ error: "Institution, title and admission are required" });
+  }
   const stmt = db.prepare(
     "INSERT INTO programs (institution_id, field, degree, duration, intake, title, summary, tuition, mode, admission, highlights, outcomes, image_url, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
   );
@@ -222,6 +229,9 @@ app.put("/api/programs/:id", authRequired, adminOnly, (req, res) => {
     outcomes,
     image_url,
   } = req.body || {};
+  if (!institution_id || !title || !admission) {
+    return res.status(400).json({ error: "Institution, title and admission are required" });
+  }
   db.run(
     "UPDATE programs SET institution_id=?, field=?, degree=?, duration=?, intake=?, title=?, summary=?, tuition=?, mode=?, admission=?, highlights=?, outcomes=?, image_url=? WHERE id=?",
     [

@@ -1570,6 +1570,13 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
   };
 
   const createInstitution = async () => {
+    const name = form.name.trim();
+    const city = form.city.trim();
+    const country = form.country.trim();
+    if (!name || !city || !country) {
+      setStatus("Ville, pays et nom sont obligatoires pour l’établissement.");
+      return;
+    }
     setStatus("Création établissement...");
     const res = await fetch(`${apiUrl}/api/institutions${editingInstitutionId ? `/${editingInstitutionId}` : ""}`, {
       method: editingInstitutionId ? "PUT" : "POST",
@@ -1577,7 +1584,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, name, city, country }),
     });
     const data = await res.json();
     if (res.ok) {
@@ -1603,9 +1610,15 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
   };
 
   const createProgram = async () => {
+    const admission = programForm.admission.trim();
+    if (!admission) {
+      setStatus("La condition d’accès est obligatoire pour la formation.");
+      return;
+    }
     setStatus("Création formation...");
     const payload = {
       ...programForm,
+      admission,
       highlights: programForm.highlights.split(",").map((s) => s.trim()).filter(Boolean),
       outcomes: programForm.outcomes.split(",").map((s) => s.trim()).filter(Boolean),
     };
@@ -1922,8 +1935,8 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Nom" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Handle" value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} />
-            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Ville" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Pays" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Ville *" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Pays *" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Adresse" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Contact" value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="WhatsApp" value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
@@ -1959,7 +1972,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Intitulé" value={programForm.title} onChange={(e) => setProgramForm({ ...programForm, title: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Coût" value={programForm.tuition} onChange={(e) => setProgramForm({ ...programForm, tuition: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Mode" value={programForm.mode} onChange={(e) => setProgramForm({ ...programForm, mode: e.target.value })} />
-            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Admission" value={programForm.admission} onChange={(e) => setProgramForm({ ...programForm, admission: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Condition d’accès *" value={programForm.admission} onChange={(e) => setProgramForm({ ...programForm, admission: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Points forts (comma)" value={programForm.highlights} onChange={(e) => setProgramForm({ ...programForm, highlights: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Débouchés (comma)" value={programForm.outcomes} onChange={(e) => setProgramForm({ ...programForm, outcomes: e.target.value })} />
           </div>
