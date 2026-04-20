@@ -13,6 +13,35 @@ function run(sql, params = []) {
   });
 }
 
+const IMAGE_POOL = {
+  Business: [
+    "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1600&q=80",
+    "https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&fit=crop&w=1600&q=80",
+    "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80",
+  ],
+  Tech: [
+    "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80",
+    "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=1600&q=80",
+    "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1600&q=80",
+  ],
+  Droit: [
+    "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1600&q=80",
+    "https://images.unsplash.com/photo-1436450412740-6b988f486c6b?auto=format&fit=crop&w=1600&q=80",
+  ],
+  QHSE: [
+    "https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=1600&q=80",
+    "https://images.unsplash.com/photo-1489515217757-5fd1be406fef?auto=format&fit=crop&w=1600&q=80",
+  ],
+};
+
+const nextIndex = {};
+function pickImage(field) {
+  const list = IMAGE_POOL[field] || IMAGE_POOL.Business;
+  const idx = nextIndex[field] || 0;
+  nextIndex[field] = (idx + 1) % list.length;
+  return list[idx];
+}
+
 async function seedAfram() {
   initDb();
 
@@ -23,11 +52,11 @@ async function seedAfram() {
   await run("DELETE FROM sqlite_sequence WHERE name IN ('institutions','programs','gallery_images')");
 
   const institution = {
-    name: "Académie Franco-Américaine de Management (AFRAM)",
+    name: "Academie Franco-Americaine de Management (AFRAM)",
     handle: "@aframgabon",
     city: "Libreville",
     country: "Gabon",
-    address: "Rue André Mintsa, Batterie IV, B.P. 3931 - Libreville, Gabon",
+    address: "Rue Andre Mintsa, Batterie IV, B.P. 3931 - Libreville, Gabon",
     contact: "(+241) 066 70 11 84 / 066 70 11 85 / 074 00 00 83",
     whatsapp: "+24174000043",
     logo_url: "/logo-afram.png",
@@ -50,27 +79,27 @@ async function seedAfram() {
   const institutionId = instInsert.lastID;
 
   const admissionLicence =
-    "Baccalauréats acceptés: Bac général, scientifique, littéraire, STT, STG, STI. Frais d'inscription: à partir de 210 000 FCFA. Scolarité annuelle: à partir de 990 000 FCFA. Uniforme: 200 000 FCFA.";
+    "Baccalaureats acceptes: Bac general, scientifique, litteraire, STT, STG, STI. Frais d'inscription: a partir de 210 000 FCFA. Scolarite annuelle: a partir de 990 000 FCFA. Uniforme: 200 000 FCFA.";
   const admissionMaster =
-    "Licence requise en Sciences de Gestion, Économie, Droit, Informatique, QSE ou Environnement. Frais d'inscription: à partir de 350 000 FCFA. Scolarité annuelle: à partir de 1 900 000 FCFA.";
+    "Licence requise en Sciences de Gestion, Economie, Droit, Informatique, QSE ou Environnement. Frais d'inscription: a partir de 350 000 FCFA. Scolarite annuelle: a partir de 1 900 000 FCFA.";
 
   const programs = [
     ["Business", "Licence", "Management des Organisations", "Pilotage organisationnel, leadership"],
-    ["Business", "Licence", "Banque Finance et Assurances", "Finance bancaire, produits d’assurance"],
-    ["Business", "Licence", "Comptabilité, Contrôle, Audit", "Comptabilité, contrôle de gestion, audit"],
-    ["Business", "Licence", "Marketing & Communication Digital", "Commerce électronique, marketing digital"],
+    ["Business", "Licence", "Banque Finance et Assurances", "Finance bancaire, produits d'assurance"],
+    ["Business", "Licence", "Comptabilite, Controle, Audit", "Comptabilite, controle de gestion, audit"],
+    ["Business", "Licence", "Marketing & Communication Digital", "Commerce electronique, marketing digital"],
     ["Business", "Licence", "Entrepreneuriat & Gestion de Projet", "Montage et gestion de projet"],
     ["Business", "Licence", "Gestion des Ressources Humaines", "Processus RH"],
-    ["Business", "Licence", "Économie", "Analyse économique, politiques publiques"],
-    ["Droit", "Licence", "Droit", "Droit des affaires, droit privé"],
-    ["QHSE", "Licence", "QHSE", "Qualité, Hygiène, Sécurité et Environnement"],
-    ["Tech", "Licence", "Systèmes Informatiques et Logiciels", "Développement logiciel, systèmes d’information"],
-    ["Business", "Master", "Master Comptabilité, Contrôle, Audit", "Expertise comptable, audit interne et externe"],
-    ["Droit", "Master", "Master Droit", "Droit des affaires avancé, contentieux"],
+    ["Business", "Licence", "Economie", "Analyse economique, politiques publiques"],
+    ["Droit", "Licence", "Droit", "Droit des affaires, droit prive"],
+    ["QHSE", "Licence", "QHSE", "Qualite, Hygiene, Securite et Environnement"],
+    ["Tech", "Licence", "Systemes Informatiques et Logiciels", "Developpement logiciel, systemes d'information"],
+    ["Business", "Master", "Master Comptabilite, Controle, Audit", "Expertise comptable, audit interne et externe"],
+    ["Droit", "Master", "Master Droit", "Droit des affaires avance, contentieux"],
     ["Business", "Master", "Master Finances", "Finance internationale"],
     ["QHSE", "Master", "Master QHSE", "Management environnemental, normes ISO"],
-    ["Business", "Master", "Master Achats & Supply Chain", "Chaîne logistique, achats stratégiques"],
-    ["Business", "Master", "Master Management Stratégique", "Management général, stratégie d’entreprise"],
+    ["Business", "Master", "Master Achats & Supply Chain", "Chaine logistique, achats strategiques"],
+    ["Business", "Master", "Master Management Strategique", "Management general, strategie d'entreprise"],
     ["Business", "Master", "Master Entrepreneuriat & Gestion de Projet", "Montage et gestion de projet"],
   ];
 
@@ -83,15 +112,15 @@ async function seedAfram() {
         field,
         degree,
         isMaster ? "2 ans" : "3 ans",
-        "Rentrée 2026",
+        "Rentree 2026",
         title,
-        `Programme AFRAM axé sur ${domain}.`,
-        isMaster ? "À partir de 1 900 000 FCFA / an" : "À partir de 990 000 FCFA / an",
-        "Présentiel",
+        `Programme AFRAM axe sur ${domain}.`,
+        isMaster ? "A partir de 1 900 000 FCFA / an" : "A partir de 990 000 FCFA / an",
+        "Presentiel",
         isMaster ? admissionMaster : admissionLicence,
-        JSON.stringify(["Approche professionnalisante", "Corps enseignant expérimenté", "Diplôme LMD"]),
-        JSON.stringify(["Insertion professionnelle", "Compétences opérationnelles", "Évolution de carrière"]),
-        "/logo-afram.png",
+        JSON.stringify(["Approche professionnalisante", "Corps enseignant experimente", "Diplome LMD"]),
+        JSON.stringify(["Insertion professionnelle", "Competences operationnelles", "Evolution de carriere"]),
+        pickImage(field),
         now(),
       ]
     );
