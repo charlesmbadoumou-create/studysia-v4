@@ -986,7 +986,7 @@ function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSel
     <div className="fixed inset-x-0 top-0 z-40 border-b border-[#f3dce2] bg-white/90 backdrop-blur-xl">
       <div className="relative mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 gap-y-2 px-4 py-3 lg:px-6">
         <div className="flex items-center">
-          <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-white shadow-lg shadow-pink-100 sm:h-20 sm:w-20">
+          <div className="flex h-14 w-[150px] items-center justify-center overflow-hidden rounded-xl bg-white px-2 shadow-lg shadow-pink-100 sm:h-16 sm:w-[190px]">
             <img src="/logo-studysia.jpg" alt="Studysia" className="h-full w-full object-contain" />
           </div>
         </div>
