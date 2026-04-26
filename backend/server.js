@@ -58,6 +58,18 @@ function adminOnly(req, res, next) {
   return next();
 }
 
+function toActiveFlag(value, defaultValue = 1) {
+  if (value === undefined || value === null || value === "") return defaultValue;
+  if (typeof value === "boolean") return value ? 1 : 0;
+  if (typeof value === "number") return value ? 1 : 0;
+  const normalized = String(value).trim().toLowerCase();
+  return normalized === "1" || normalized === "true" || normalized === "vrai" ? 1 : 0;
+}
+
+function includeInactive(req) {
+  return req.query.include_inactive === "1";
+}
+
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
@@ -100,7 +112,10 @@ app.post("/api/auth/login", (req, res) => {
 });
 
 app.get("/api/institutions", (req, res) => {
-  db.all("SELECT * FROM institutions ORDER BY id DESC", [], (err, rows) => {
+  const query = includeInactive(req)
+    ? "SELECT * FROM institutions ORDER BY id DESC"
+    : "SELECT * FROM institutions WHERE active_etablissement = 1 ORDER BY id DESC";
+  db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -108,11 +123,17 @@ app.get("/api/institutions", (req, res) => {
 
 app.get("/api/institutions/:id", (req, res) => {
   const id = Number(req.params.id);
-  db.get("SELECT * FROM institutions WHERE id = ?", [id], (err, inst) => {
+  const instQuery = includeInactive(req)
+    ? "SELECT * FROM institutions WHERE id = ?"
+    : "SELECT * FROM institutions WHERE id = ? AND active_etablissement = 1";
+  db.get(instQuery, [id], (err, inst) => {
     if (err || !inst) return res.status(404).json({ error: "Not found" });
     db.all("SELECT * FROM gallery_images WHERE institution_id = ?", [id], (gerr, gallery) => {
       if (gerr) return res.status(500).json({ error: gerr.message });
-      db.all("SELECT * FROM programs WHERE institution_id = ?", [id], (perr, programs) => {
+      const programsQuery = includeInactive(req)
+        ? "SELECT * FROM programs WHERE institution_id = ?"
+        : "SELECT * FROM programs WHERE institution_id = ? AND active_formation = 1";
+      db.all(programsQuery, [id], (perr, programs) => {
         if (perr) return res.status(500).json({ error: perr.message });
         res.json({ ...inst, gallery, programs });
       });
@@ -121,28 +142,31 @@ app.get("/api/institutions/:id", (req, res) => {
 });
 
 app.post("/api/institutions", authRequired, adminOnly, (req, res) => {
-  const { name, handle, city, country, address, contact, whatsapp, logo_url } = req.body || {};
+  const { name, handle, city, country, address, contact, whatsapp, logo_url, active_etablissement } = req.body || {};
   if (!name || !city || !country) {
     return res.status(400).json({ error: "Name, city and country are required" });
   }
   const stmt = db.prepare(
-    "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, created_at) VALUES (?,?,?,?,?,?,?,?,?)"
+    "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, active_etablissement, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)"
   );
-  stmt.run([name, handle, city, country, address, contact, whatsapp, logo_url, now()], function (err) {
+  stmt.run(
+    [name, handle, city, country, address, contact, whatsapp, logo_url, toActiveFlag(active_etablissement, 1), now()],
+    function (err) {
     if (err) return res.status(400).json({ error: err.message });
     res.json({ id: this.lastID });
-  });
+    }
+  );
 });
 
 app.put("/api/institutions/:id", authRequired, adminOnly, (req, res) => {
   const id = Number(req.params.id);
-  const { name, handle, city, country, address, contact, whatsapp, logo_url } = req.body || {};
+  const { name, handle, city, country, address, contact, whatsapp, logo_url, active_etablissement } = req.body || {};
   if (!name || !city || !country) {
     return res.status(400).json({ error: "Name, city and country are required" });
   }
   db.run(
-    "UPDATE institutions SET name=?, handle=?, city=?, country=?, address=?, contact=?, whatsapp=?, logo_url=? WHERE id=?",
-    [name, handle, city, country, address, contact, whatsapp, logo_url, id],
+    "UPDATE institutions SET name=?, handle=?, city=?, country=?, address=?, contact=?, whatsapp=?, logo_url=?, active_etablissement=? WHERE id=?",
+    [name, handle, city, country, address, contact, whatsapp, logo_url, toActiveFlag(active_etablissement, 1), id],
     function (err) {
       if (err) return res.status(400).json({ error: err.message });
       res.json({ ok: this.changes > 0 });
@@ -159,7 +183,14 @@ app.delete("/api/institutions/:id", authRequired, adminOnly, (req, res) => {
 });
 
 app.get("/api/programs", (req, res) => {
-  db.all("SELECT * FROM programs ORDER BY id DESC", [], (err, rows) => {
+  const query = includeInactive(req)
+    ? "SELECT * FROM programs ORDER BY id DESC"
+    : `SELECT p.* 
+       FROM programs p
+       INNER JOIN institutions i ON i.id = p.institution_id
+       WHERE p.active_formation = 1 AND i.active_etablissement = 1
+       ORDER BY p.id DESC`;
+  db.all(query, [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -180,13 +211,14 @@ app.post("/api/programs", authRequired, adminOnly, (req, res) => {
     highlights,
     outcomes,
     image_url,
+    active_formation,
   } = req.body || {};
 
   if (!institution_id || !title || !admission) {
     return res.status(400).json({ error: "Institution, title and admission are required" });
   }
   const stmt = db.prepare(
-    "INSERT INTO programs (institution_id, field, degree, duration, intake, title, summary, tuition, mode, admission, highlights, outcomes, image_url, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+    "INSERT INTO programs (institution_id, field, degree, duration, intake, title, summary, tuition, mode, admission, highlights, outcomes, image_url, active_formation, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
   );
   stmt.run(
     [
@@ -203,6 +235,7 @@ app.post("/api/programs", authRequired, adminOnly, (req, res) => {
       JSON.stringify(highlights || []),
       JSON.stringify(outcomes || []),
       image_url,
+      toActiveFlag(active_formation, 1),
       now(),
     ],
     function (err) {
@@ -228,12 +261,13 @@ app.put("/api/programs/:id", authRequired, adminOnly, (req, res) => {
     highlights,
     outcomes,
     image_url,
+    active_formation,
   } = req.body || {};
   if (!institution_id || !title || !admission) {
     return res.status(400).json({ error: "Institution, title and admission are required" });
   }
   db.run(
-    "UPDATE programs SET institution_id=?, field=?, degree=?, duration=?, intake=?, title=?, summary=?, tuition=?, mode=?, admission=?, highlights=?, outcomes=?, image_url=? WHERE id=?",
+    "UPDATE programs SET institution_id=?, field=?, degree=?, duration=?, intake=?, title=?, summary=?, tuition=?, mode=?, admission=?, highlights=?, outcomes=?, image_url=?, active_formation=? WHERE id=?",
     [
       institution_id,
       field,
@@ -248,6 +282,7 @@ app.put("/api/programs/:id", authRequired, adminOnly, (req, res) => {
       JSON.stringify(highlights || []),
       JSON.stringify(outcomes || []),
       image_url,
+      toActiveFlag(active_formation, 1),
       id,
     ],
     function (err) {

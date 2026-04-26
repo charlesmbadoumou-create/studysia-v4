@@ -1,4 +1,4 @@
-
+﻿
 import React, { useMemo, useState } from "react";
 import {
   Building2,
@@ -39,16 +39,59 @@ const DEFAULT_ADMISSION = "Dossier + entretien";
 const DEFAULT_CONTACT = "contact@etablissement.ga";
 const GENERIC_LOGO = "/logo-afram.png";
 
-const API_URL = import.meta.env.VITE_API_URL || "";
-const AFRAM_ONLY = (name = "") => name.toLowerCase().includes("afram");
+const API_URL = import.meta.env.VITE_API_URL || "https://api.studysia.com";
+const normalizeText = (value = "") =>
+  value
+    .toString()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+const fixText = (value = "") => {
+  const str = value == null ? "" : String(value);
+  try {
+    return decodeURIComponent(escape(str));
+  } catch {
+    return str;
+  }
+};
+const fixArray = (arr) => (Array.isArray(arr) ? arr.map((v) => fixText(v)) : []);
+const fixProgram = (item) => ({
+  ...item,
+  field: fixText(item.field),
+  degree: fixText(item.degree),
+  duration: fixText(item.duration),
+  intake: fixText(item.intake),
+  title: fixText(item.title),
+  institution: fixText(item.institution),
+  handle: fixText(item.handle),
+  city: fixText(item.city),
+  country: fixText(item.country),
+  tuition: fixText(item.tuition),
+  mode: fixText(item.mode),
+  saves: fixText(item.saves),
+  contacts: fixText(item.contacts),
+  image: fixText(item.image),
+  summary: fixText(item.summary),
+  institutionBio: fixText(item.institutionBio),
+  accent: fixText(item.accent),
+  admission: fixText(item.admission),
+  whatsapp: fixText(item.whatsapp),
+  contact: fixText(item.contact),
+  logo: fixText(item.logo),
+  address: fixText(item.address),
+  highlights: fixArray(item.highlights),
+  outcomes: fixArray(item.outcomes),
+  gallery: Array.isArray(item.gallery) ? item.gallery.map((img) => fixText(img)) : [],
+});
 
 const filters = [
-  { id: "Tous", label: "Toutes les filières", icon: Sparkles },
+  { id: "Tous", label: "Toutes les filiÃ¨res", icon: Sparkles },
   { id: "Business", label: "Business & Gestion", icon: Briefcase },
   { id: "Tech", label: "Tech & Digital", icon: Globe2 },
-  { id: "Santé", label: "Santé", icon: GraduationCap },
-  { id: "Ingénierie", label: "Ingénierie", icon: Building2 },
-  { id: "Arts", label: "Arts & Création", icon: BookOpen },
+  { id: "SantÃ©", label: "SantÃ©", icon: GraduationCap },
+  { id: "IngÃ©nierie", label: "IngÃ©nierie", icon: Building2 },
+  { id: "Arts", label: "Arts & CrÃ©ation", icon: BookOpen },
 ];
 
 const programs = [
@@ -57,23 +100,23 @@ const programs = [
     field: "Business",
     degree: "Master",
     duration: "2 ans",
-    intake: "Rentrée Octobre 2026",
+    intake: "RentrÃ©e Octobre 2026",
     title: "Master en Management des Organisations",
-    institution: "Université Omar Bongo",
+    institution: "UniversitÃ© Omar Bongo",
     handle: "@uob_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "À partir de 787 148 FCFA / an",
-    mode: "Présentiel",
+    tuition: "Ã€ partir de 787 148 FCFA / an",
+    mode: "PrÃ©sentiel",
     saves: "980",
     contacts: "Candidatures ouvertes",
     image:
       "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Programme axé sur la stratégie, la gestion des ressources humaines et la conduite du changement.",
+      "Programme axÃ© sur la stratÃ©gie, la gestion des ressources humaines et la conduite du changement.",
     institutionBio:
-      "Université publique de référence au Gabon, avec une forte implantation à Libreville.",
-    highlights: ["Stratégie", "RH", "Pilotage"],
+      "UniversitÃ© publique de rÃ©fÃ©rence au Gabon, avec une forte implantation Ã  Libreville.",
+    highlights: ["StratÃ©gie", "RH", "Pilotage"],
     outcomes: ["Chef de projet", "Manager RH", "Consultant junior"],
     accent: "from-orange-400/15 via-amber-300/20 to-transparent",
   },
@@ -82,74 +125,74 @@ const programs = [
     field: "Tech",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Septembre 2026",
-    title: "Licence en Informatique et Réseaux",
-    institution: "Université des Sciences et Techniques de Masuku",
+    intake: "RentrÃ©e Septembre 2026",
+    title: "Licence en Informatique et RÃ©seaux",
+    institution: "UniversitÃ© des Sciences et Techniques de Masuku",
     handle: "@ustm_gabon",
     city: "Franceville, Gabon",
     country: "Gabon",
-    tuition: "À partir de 918 340 FCFA / an",
-    mode: "Présentiel",
+    tuition: "Ã€ partir de 918 340 FCFA / an",
+    mode: "PrÃ©sentiel",
     saves: "1,1k",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Formation en systèmes, réseaux, développement et bases de données appliquées.",
+      "Formation en systÃ¨mes, rÃ©seaux, dÃ©veloppement et bases de donnÃ©es appliquÃ©es.",
     institutionBio:
-      "Université scientifique de référence, orientée vers l’ingénierie et les sciences appliquées.",
-    highlights: ["Réseaux", "Développement", "Bases de données"],
-    outcomes: ["Admin systèmes", "Développeur junior", "Technicien réseaux"],
+      "UniversitÃ© scientifique de rÃ©fÃ©rence, orientÃ©e vers lâ€™ingÃ©nierie et les sciences appliquÃ©es.",
+    highlights: ["RÃ©seaux", "DÃ©veloppement", "Bases de donnÃ©es"],
+    outcomes: ["Admin systÃ¨mes", "DÃ©veloppeur junior", "Technicien rÃ©seaux"],
     accent: "from-pink-400/15 via-orange-300/20 to-transparent",
   },
   {
     id: 8,
-    field: "Santé",
+    field: "SantÃ©",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence en Sciences Biomédicales",
-    institution: "Université des Sciences de la Santé",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence en Sciences BiomÃ©dicales",
+    institution: "UniversitÃ© des Sciences de la SantÃ©",
     handle: "@uss_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "À partir de 1 180 723 FCFA / an",
-    mode: "Présentiel",
+    tuition: "Ã€ partir de 1 180 723 FCFA / an",
+    mode: "PrÃ©sentiel",
     saves: "760",
-    contacts: "Places limitées",
+    contacts: "Places limitÃ©es",
     image:
       "https://images.unsplash.com/photo-1532938911079-1b06ac7ceec7?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Parcours biomédical avec initiation aux techniques de laboratoire et à la recherche clinique.",
+      "Parcours biomÃ©dical avec initiation aux techniques de laboratoire et Ã  la recherche clinique.",
     institutionBio:
-      "Établissement supérieur orienté santé publique et formation clinique.",
+      "Ã‰tablissement supÃ©rieur orientÃ© santÃ© publique et formation clinique.",
     highlights: ["Biologie", "Laboratoire", "Recherche"],
-    outcomes: ["Assistant de recherche", "Technicien biomédical", "Attaché clinique"],
+    outcomes: ["Assistant de recherche", "Technicien biomÃ©dical", "AttachÃ© clinique"],
     accent: "from-rose-400/15 via-pink-300/20 to-transparent",
   },
   {
     id: 9,
-    field: "Ingénierie",
+    field: "IngÃ©nierie",
     degree: "Master",
     duration: "2 ans",
-    intake: "Rentrée Novembre 2026",
-    title: "Master en Génie Pétrolier et Énergie",
-    institution: "Institut du Pétrole et du Gaz",
+    intake: "RentrÃ©e Novembre 2026",
+    title: "Master en GÃ©nie PÃ©trolier et Ã‰nergie",
+    institution: "Institut du PÃ©trole et du Gaz",
     handle: "@ipg_gabon",
     city: "Port-Gentil, Gabon",
     country: "Gabon",
-    tuition: "À partir de 1 705 488 FCFA / an",
-    mode: "Présentiel",
+    tuition: "Ã€ partir de 1 705 488 FCFA / an",
+    mode: "PrÃ©sentiel",
     saves: "1,3k",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1509395176047-4a66953fd231?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Spécialisation en exploration, production et gestion des infrastructures énergétiques.",
+      "SpÃ©cialisation en exploration, production et gestion des infrastructures Ã©nergÃ©tiques.",
     institutionBio:
-      "Institut spécialisé orienté vers les métiers du pétrole, du gaz et de l’énergie.",
-    highlights: ["Forage", "Production", "Énergie"],
-    outcomes: ["Ingénieur production", "Ingénieur forage", "Chef de projet énergie"],
+      "Institut spÃ©cialisÃ© orientÃ© vers les mÃ©tiers du pÃ©trole, du gaz et de lâ€™Ã©nergie.",
+    highlights: ["Forage", "Production", "Ã‰nergie"],
+    outcomes: ["IngÃ©nieur production", "IngÃ©nieur forage", "Chef de projet Ã©nergie"],
     accent: "from-orange-300/15 via-pink-300/20 to-transparent",
   },
   {
@@ -157,24 +200,24 @@ const programs = [
     field: "Arts",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
+    intake: "RentrÃ©e Octobre 2026",
     title: "Licence en Design Graphique et Communication Visuelle",
-    institution: "École Supérieure des Métiers de l’Image",
+    institution: "Ã‰cole SupÃ©rieure des MÃ©tiers de lâ€™Image",
     handle: "@esmi_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "À partir de 1 311 914 FCFA / an",
+    tuition: "Ã€ partir de 1 311 914 FCFA / an",
     mode: "Hybride",
     saves: "640",
     contacts: "Portfolio requis",
     image:
       "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Formation créative en identité visuelle, UI/UX et production multimédia.",
+      "Formation crÃ©ative en identitÃ© visuelle, UI/UX et production multimÃ©dia.",
     institutionBio:
-      "École privée dédiée aux métiers de la création et de la communication.",
-    highlights: ["Identité visuelle", "UI/UX", "Multimédia"],
-    outcomes: ["Designer graphique", "UI designer", "Créatif digital"],
+      "Ã‰cole privÃ©e dÃ©diÃ©e aux mÃ©tiers de la crÃ©ation et de la communication.",
+    highlights: ["IdentitÃ© visuelle", "UI/UX", "MultimÃ©dia"],
+    outcomes: ["Designer graphique", "UI designer", "CrÃ©atif digital"],
     accent: "from-pink-500/15 via-orange-400/20 to-transparent",
   },
   {
@@ -182,24 +225,24 @@ const programs = [
     field: "Business",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence en Finance Comptabilité",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence en Finance ComptabilitÃ©",
     institution: "Institut National des Sciences de Gestion (INSG)",
     handle: "@insg_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "1,0k",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Parcours en finance et comptabilité proposé au sein des formations de l’INSG.",
+      "Parcours en finance et comptabilitÃ© proposÃ© au sein des formations de lâ€™INSG.",
     institutionBio:
-      "Institut public gabonais spécialisé en sciences de gestion et management.",
-    highlights: ["Finance", "Comptabilité", "Gestion"],
-    outcomes: ["Comptable", "Assistant financier", "Contrôleur junior"],
+      "Institut public gabonais spÃ©cialisÃ© en sciences de gestion et management.",
+    highlights: ["Finance", "ComptabilitÃ©", "Gestion"],
+    outcomes: ["Comptable", "Assistant financier", "ContrÃ´leur junior"],
     accent: "from-orange-400/15 via-amber-300/20 to-transparent",
   },
   {
@@ -207,24 +250,24 @@ const programs = [
     field: "Business",
     degree: "Master",
     duration: "2 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Master en Marketing Stratégique et Commercial",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Master en Marketing StratÃ©gique et Commercial",
     institution: "Institut National des Sciences de Gestion (INSG)",
     handle: "@insg_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "920",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1545239351-ef35f43d514b?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Master orienté stratégie marketing et développement commercial.",
+      "Master orientÃ© stratÃ©gie marketing et dÃ©veloppement commercial.",
     institutionBio:
-      "Institut public gabonais spécialisé en sciences de gestion et management.",
-    highlights: ["Marketing", "Stratégie", "Commerce"],
-    outcomes: ["Chef de produit", "Responsable commercial", "Chargé marketing"],
+      "Institut public gabonais spÃ©cialisÃ© en sciences de gestion et management.",
+    highlights: ["Marketing", "StratÃ©gie", "Commerce"],
+    outcomes: ["Chef de produit", "Responsable commercial", "ChargÃ© marketing"],
     accent: "from-pink-400/15 via-orange-300/20 to-transparent",
   },
   {
@@ -232,24 +275,24 @@ const programs = [
     field: "Business",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Septembre 2026",
-    title: "Licence Achat – Qualité – Logistique",
-    institution: "Institut Supérieur de Technologie (IST)",
+    intake: "RentrÃ©e Septembre 2026",
+    title: "Licence Achat â€“ QualitÃ© â€“ Logistique",
+    institution: "Institut SupÃ©rieur de Technologie (IST)",
     handle: "@ist_gabon",
     city: "Bikele, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "1,2k",
-    contacts: "Concours d’entrée",
+    contacts: "Concours dâ€™entrÃ©e",
     image:
       "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Licence professionnalisante du pôle Management de l’IST.",
+      "Licence professionnalisante du pÃ´le Management de lâ€™IST.",
     institutionBio:
-      "Établissement supérieur à Bikele proposant des formations en management et technologie.",
-    highlights: ["Achat", "Qualité", "Logistique"],
-    outcomes: ["Assistant logistique", "Chargé achats", "Contrôleur qualité"],
+      "Ã‰tablissement supÃ©rieur Ã  Bikele proposant des formations en management et technologie.",
+    highlights: ["Achat", "QualitÃ©", "Logistique"],
+    outcomes: ["Assistant logistique", "ChargÃ© achats", "ContrÃ´leur qualitÃ©"],
     accent: "from-orange-300/15 via-pink-300/20 to-transparent",
   },
   {
@@ -257,24 +300,24 @@ const programs = [
     field: "Tech",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Septembre 2026",
-    title: "Génie Logiciel : Maintenance Mobile et Développement d’Applications",
-    institution: "Institut Supérieur de Technologie (IST)",
+    intake: "RentrÃ©e Septembre 2026",
+    title: "GÃ©nie Logiciel : Maintenance Mobile et DÃ©veloppement dâ€™Applications",
+    institution: "Institut SupÃ©rieur de Technologie (IST)",
     handle: "@ist_gabon",
     city: "Bikele, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "1,4k",
-    contacts: "Concours d’entrée",
+    contacts: "Concours dâ€™entrÃ©e",
     image:
       "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Parcours technologique orienté développement d’applications et maintenance mobile.",
+      "Parcours technologique orientÃ© dÃ©veloppement dâ€™applications et maintenance mobile.",
     institutionBio:
-      "Établissement supérieur à Bikele proposant des formations en management et technologie.",
-    highlights: ["Développement", "Mobile", "Génie logiciel"],
-    outcomes: ["Développeur mobile", "Intégrateur", "Technicien applicatif"],
+      "Ã‰tablissement supÃ©rieur Ã  Bikele proposant des formations en management et technologie.",
+    highlights: ["DÃ©veloppement", "Mobile", "GÃ©nie logiciel"],
+    outcomes: ["DÃ©veloppeur mobile", "IntÃ©grateur", "Technicien applicatif"],
     accent: "from-pink-400/15 via-orange-300/20 to-transparent",
   },
   {
@@ -282,24 +325,24 @@ const programs = [
     field: "Business",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
+    intake: "RentrÃ©e Octobre 2026",
     title: "Licence en Marketing et Communication Digitale",
     institution: "African University of Management & Technologies (AUM)",
     handle: "@aum_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "980",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Formation orientée marketing digital et communication, en phase avec les spécialisations de l’AUM.",
+      "Formation orientÃ©e marketing digital et communication, en phase avec les spÃ©cialisations de lâ€™AUM.",
     institutionBio:
-      "Université privée de management et technologies basée à Libreville.",
+      "UniversitÃ© privÃ©e de management et technologies basÃ©e Ã  Libreville.",
     highlights: ["Marketing digital", "Communication", "Projet"],
-    outcomes: ["Chargé marketing", "Community manager", "Assistant communication"],
+    outcomes: ["ChargÃ© marketing", "Community manager", "Assistant communication"],
     accent: "from-orange-400/15 via-pink-400/20 to-transparent",
   },
   {
@@ -307,74 +350,74 @@ const programs = [
     field: "Business",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
+    intake: "RentrÃ©e Octobre 2026",
     title: "Licence (AFRAM)",
-    institution: "Académie Franco-Américaine de Management (AFRAM)",
+    institution: "AcadÃ©mie Franco-AmÃ©ricaine de Management (AFRAM)",
     handle: "@afram_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "720",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1507537297725-24a1c029d3ca?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "L’AFRAM propose des parcours de licence et de master en enseignement supérieur.",
+      "Lâ€™AFRAM propose des parcours de licence et de master en enseignement supÃ©rieur.",
     institutionBio:
-      "Établissement privé d’enseignement supérieur habilité et reconnu par l’État gabonais.",
+      "Ã‰tablissement privÃ© dâ€™enseignement supÃ©rieur habilitÃ© et reconnu par lâ€™Ã‰tat gabonais.",
     highlights: ["Management", "Business school", "Professionnalisation"],
-    outcomes: ["Assistant manager", "Chargé d’études", "Gestionnaire junior"],
+    outcomes: ["Assistant manager", "ChargÃ© dâ€™Ã©tudes", "Gestionnaire junior"],
     accent: "from-rose-400/15 via-orange-300/20 to-transparent",
   },
   {
     id: 17,
     field: "Business",
-    degree: "Filière",
+    degree: "FiliÃ¨re",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
+    intake: "RentrÃ©e Octobre 2026",
     title: "Science de Gestion",
-    institution: "Institut des Hautes Études Économiques et Entrepreneuriales (IHEE)",
+    institution: "Institut des Hautes Ã‰tudes Ã‰conomiques et Entrepreneuriales (IHEE)",
     handle: "@ihee_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "860",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Filière de sciences de gestion proposée par l’IHEE.",
+      "FiliÃ¨re de sciences de gestion proposÃ©e par lâ€™IHEE.",
     institutionBio:
-      "Établissement d’enseignement supérieur reconnu par l’État gabonais depuis 2003.",
+      "Ã‰tablissement dâ€™enseignement supÃ©rieur reconnu par lâ€™Ã‰tat gabonais depuis 2003.",
     highlights: ["Gestion", "Administration", "Entrepreneuriat"],
-    outcomes: ["Assistant gestion", "Chargé administratif", "Entrepreneur junior"],
+    outcomes: ["Assistant gestion", "ChargÃ© administratif", "Entrepreneur junior"],
     accent: "from-pink-400/15 via-rose-300/20 to-transparent",
   },
   {
     id: 18,
     field: "Business",
-    degree: "Filière",
+    degree: "FiliÃ¨re",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
+    intake: "RentrÃ©e Octobre 2026",
     title: "Science Juridique",
-    institution: "Institut des Hautes Études Économiques et Entrepreneuriales (IHEE)",
+    institution: "Institut des Hautes Ã‰tudes Ã‰conomiques et Entrepreneuriales (IHEE)",
     handle: "@ihee_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "840",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Filière en sciences juridiques proposée par l’IHEE.",
+      "FiliÃ¨re en sciences juridiques proposÃ©e par lâ€™IHEE.",
     institutionBio:
-      "Établissement d’enseignement supérieur reconnu par l’État gabonais depuis 2003.",
-    highlights: ["Droit", "Réglementation", "Analyse juridique"],
-    outcomes: ["Assistant juridique", "Gestionnaire conformité", "Chargé de dossiers"],
+      "Ã‰tablissement dâ€™enseignement supÃ©rieur reconnu par lâ€™Ã‰tat gabonais depuis 2003.",
+    highlights: ["Droit", "RÃ©glementation", "Analyse juridique"],
+    outcomes: ["Assistant juridique", "Gestionnaire conformitÃ©", "ChargÃ© de dossiers"],
     accent: "from-orange-300/15 via-pink-300/20 to-transparent",
   },
   {
@@ -382,49 +425,49 @@ const programs = [
     field: "Tech",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Septembre 2026",
+    intake: "RentrÃ©e Septembre 2026",
     title: "Licence en Informatique Industrielle",
-    institution: "Institut des Sciences et Techniques Avancées (ISTA)",
+    institution: "Institut des Sciences et Techniques AvancÃ©es (ISTA)",
     handle: "@ista_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "780",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Parcours orienté systèmes industriels, automatisation et outils numériques.",
+      "Parcours orientÃ© systÃ¨mes industriels, automatisation et outils numÃ©riques.",
     institutionBio:
-      "Établissement supérieur orienté sciences et techniques appliquées.",
-    highlights: ["Systèmes industriels", "Automatisation", "Informatique"],
-    outcomes: ["Technicien systèmes", "Assistant ingénieur", "Support industriel"],
+      "Ã‰tablissement supÃ©rieur orientÃ© sciences et techniques appliquÃ©es.",
+    highlights: ["SystÃ¨mes industriels", "Automatisation", "Informatique"],
+    outcomes: ["Technicien systÃ¨mes", "Assistant ingÃ©nieur", "Support industriel"],
     accent: "from-pink-400/15 via-orange-300/20 to-transparent",
   },
   {
     id: 20,
-    field: "Ingénierie",
+    field: "IngÃ©nierie",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence en Génie Civil",
-    institution: "Institut de Technologie Appliquée (ITA)",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence en GÃ©nie Civil",
+    institution: "Institut de Technologie AppliquÃ©e (ITA)",
     handle: "@ita_gabon",
     city: "Port-Gentil, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "690",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Formation axée sur la construction, la topographie et la gestion de chantier.",
+      "Formation axÃ©e sur la construction, la topographie et la gestion de chantier.",
     institutionBio:
-      "Institut orienté métiers techniques et ingénierie appliquée.",
+      "Institut orientÃ© mÃ©tiers techniques et ingÃ©nierie appliquÃ©e.",
     highlights: ["Construction", "Topographie", "Chantier"],
-    outcomes: ["Conducteur de travaux", "Technicien chantier", "Assistant ingénieur"],
+    outcomes: ["Conducteur de travaux", "Technicien chantier", "Assistant ingÃ©nieur"],
     accent: "from-orange-300/15 via-pink-300/20 to-transparent",
   },
   {
@@ -432,24 +475,24 @@ const programs = [
     field: "Tech",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Septembre 2026",
-    title: "Licence en Cybersécurité et Réseaux",
-    institution: "École Supérieure des Métiers du Numérique (Gabon)",
+    intake: "RentrÃ©e Septembre 2026",
+    title: "Licence en CybersÃ©curitÃ© et RÃ©seaux",
+    institution: "Ã‰cole SupÃ©rieure des MÃ©tiers du NumÃ©rique (Gabon)",
     handle: "@esmn_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "870",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Parcours orienté sécurité des systèmes, réseaux et pratiques de cybersécurité.",
+      "Parcours orientÃ© sÃ©curitÃ© des systÃ¨mes, rÃ©seaux et pratiques de cybersÃ©curitÃ©.",
     institutionBio:
-      "Établissement supérieur orienté métiers du numérique au Gabon.",
-    highlights: ["Cybersécurité", "Réseaux", "Systèmes"],
-    outcomes: ["Analyste SOC junior", "Administrateur réseau", "Technicien sécurité"],
+      "Ã‰tablissement supÃ©rieur orientÃ© mÃ©tiers du numÃ©rique au Gabon.",
+    highlights: ["CybersÃ©curitÃ©", "RÃ©seaux", "SystÃ¨mes"],
+    outcomes: ["Analyste SOC junior", "Administrateur rÃ©seau", "Technicien sÃ©curitÃ©"],
     accent: "from-pink-400/15 via-orange-300/20 to-transparent",
   },
   {
@@ -457,72 +500,72 @@ const programs = [
     field: "Tech",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Septembre 2026",
-    title: "Licence en Développement Web & Mobile",
-    institution: "École Supérieure des Métiers du Numérique (Gabon)",
+    intake: "RentrÃ©e Septembre 2026",
+    title: "Licence en DÃ©veloppement Web & Mobile",
+    institution: "Ã‰cole SupÃ©rieure des MÃ©tiers du NumÃ©rique (Gabon)",
     handle: "@esmn_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "910",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Formation appliquée en développement front-end, back-end et applications mobiles.",
+      "Formation appliquÃ©e en dÃ©veloppement front-end, back-end et applications mobiles.",
     institutionBio:
-      "Établissement supérieur orienté métiers du numérique au Gabon.",
+      "Ã‰tablissement supÃ©rieur orientÃ© mÃ©tiers du numÃ©rique au Gabon.",
     highlights: ["Web", "Mobile", "Full-stack"],
-    outcomes: ["Développeur web", "Développeur mobile", "Intégrateur"],
+    outcomes: ["DÃ©veloppeur web", "DÃ©veloppeur mobile", "IntÃ©grateur"],
     accent: "from-orange-300/15 via-pink-300/20 to-transparent",
   },
   {
     id: 23,
-    field: "Santé",
+    field: "SantÃ©",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence en Santé Publique",
-    institution: "Institut Supérieur de Santé du Gabon",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence en SantÃ© Publique",
+    institution: "Institut SupÃ©rieur de SantÃ© du Gabon",
     handle: "@iss_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "740",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Parcours axé prévention, épidémiologie et gestion des programmes de santé.",
+      "Parcours axÃ© prÃ©vention, Ã©pidÃ©miologie et gestion des programmes de santÃ©.",
     institutionBio:
-      "Établissement supérieur orienté santé publique et formation clinique au Gabon.",
-    highlights: ["Prévention", "Épidémiologie", "Santé communautaire"],
-    outcomes: ["Chargé de programme", "Superviseur santé", "Agent de terrain"],
+      "Ã‰tablissement supÃ©rieur orientÃ© santÃ© publique et formation clinique au Gabon.",
+    highlights: ["PrÃ©vention", "Ã‰pidÃ©miologie", "SantÃ© communautaire"],
+    outcomes: ["ChargÃ© de programme", "Superviseur santÃ©", "Agent de terrain"],
     accent: "from-rose-400/15 via-pink-300/20 to-transparent",
   },
   {
     id: 24,
-    field: "Santé",
+    field: "SantÃ©",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence en Sciences Infirmières",
-    institution: "Institut Supérieur de Santé du Gabon",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence en Sciences InfirmiÃ¨res",
+    institution: "Institut SupÃ©rieur de SantÃ© du Gabon",
     handle: "@iss_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "820",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1580281658629-6d1ed0ee5b04?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Formation clinique orientée soins infirmiers et pratiques hospitalières.",
+      "Formation clinique orientÃ©e soins infirmiers et pratiques hospitaliÃ¨res.",
     institutionBio:
-      "Établissement supérieur orienté santé publique et formation clinique au Gabon.",
+      "Ã‰tablissement supÃ©rieur orientÃ© santÃ© publique et formation clinique au Gabon.",
     highlights: ["Soins", "Pratique clinique", "Stages"],
     outcomes: ["Infirmier", "Assistant soins", "Coordinateur terrain"],
     accent: "from-pink-400/15 via-rose-300/20 to-transparent",
@@ -532,24 +575,24 @@ const programs = [
     field: "Business",
     degree: "Master",
     duration: "2 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Master en Audit et Contrôle de Gestion",
-    institution: "École Supérieure de Commerce du Gabon",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Master en Audit et ContrÃ´le de Gestion",
+    institution: "Ã‰cole SupÃ©rieure de Commerce du Gabon",
     handle: "@escg_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "930",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Spécialisation en audit, contrôle interne et pilotage de la performance.",
+      "SpÃ©cialisation en audit, contrÃ´le interne et pilotage de la performance.",
     institutionBio:
-      "École supérieure gabonaise orientée management, finance et commerce.",
-    highlights: ["Audit", "Contrôle", "Finance"],
-    outcomes: ["Auditeur junior", "Contrôleur de gestion", "Analyste financier"],
+      "Ã‰cole supÃ©rieure gabonaise orientÃ©e management, finance et commerce.",
+    highlights: ["Audit", "ContrÃ´le", "Finance"],
+    outcomes: ["Auditeur junior", "ContrÃ´leur de gestion", "Analyste financier"],
     accent: "from-orange-400/15 via-amber-300/20 to-transparent",
   },
   {
@@ -557,24 +600,24 @@ const programs = [
     field: "Business",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Septembre 2026",
+    intake: "RentrÃ©e Septembre 2026",
     title: "Licence en Entrepreneuriat et Gestion PME",
-    institution: "École Supérieure de Commerce du Gabon",
+    institution: "Ã‰cole SupÃ©rieure de Commerce du Gabon",
     handle: "@escg_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "790",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Licence orientée création d’entreprise, gestion opérationnelle et financement.",
+      "Licence orientÃ©e crÃ©ation dâ€™entreprise, gestion opÃ©rationnelle et financement.",
     institutionBio:
-      "École supérieure gabonaise orientée management, finance et commerce.",
+      "Ã‰cole supÃ©rieure gabonaise orientÃ©e management, finance et commerce.",
     highlights: ["Entrepreneuriat", "Gestion", "PME"],
-    outcomes: ["Assistant manager", "Chargé d’affaires", "Entrepreneur junior"],
+    outcomes: ["Assistant manager", "ChargÃ© dâ€™affaires", "Entrepreneur junior"],
     accent: "from-pink-400/15 via-orange-300/20 to-transparent",
   },
   {
@@ -582,24 +625,24 @@ const programs = [
     field: "Tech",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence Informatique, Développement Web, Génie Logiciel et Electronique",
-    institution: "Institut Facultaire d’Informatique et de Management (IFIM)",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence Informatique, DÃ©veloppement Web, GÃ©nie Logiciel et Electronique",
+    institution: "Institut Facultaire dâ€™Informatique et de Management (IFIM)",
     handle: "@ifim_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "640",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Parcours informatique incluant développement web, génie logiciel et électronique.",
+      "Parcours informatique incluant dÃ©veloppement web, gÃ©nie logiciel et Ã©lectronique.",
     institutionBio:
-      "Établissement supérieur gabonais listant des filières en informatique et management.",
-    highlights: ["Informatique", "Développement web", "Génie logiciel"],
-    outcomes: ["Développeur junior", "Technicien logiciel", "Support applicatif"],
+      "Ã‰tablissement supÃ©rieur gabonais listant des filiÃ¨res en informatique et management.",
+    highlights: ["Informatique", "DÃ©veloppement web", "GÃ©nie logiciel"],
+    outcomes: ["DÃ©veloppeur junior", "Technicien logiciel", "Support applicatif"],
     accent: "from-pink-400/15 via-orange-300/20 to-transparent",
   },
   {
@@ -607,24 +650,24 @@ const programs = [
     field: "Tech",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence Télécommunications et Réseaux",
-    institution: "Institut Facultaire d’Informatique et de Management (IFIM)",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence TÃ©lÃ©communications et RÃ©seaux",
+    institution: "Institut Facultaire dâ€™Informatique et de Management (IFIM)",
     handle: "@ifim_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "610",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Filière orientée réseaux et télécommunications.",
+      "FiliÃ¨re orientÃ©e rÃ©seaux et tÃ©lÃ©communications.",
     institutionBio:
-      "Établissement supérieur gabonais listant des filières en informatique et management.",
-    highlights: ["Réseaux", "Télécoms", "Systèmes"],
-    outcomes: ["Technicien réseaux", "Admin junior", "Support télécoms"],
+      "Ã‰tablissement supÃ©rieur gabonais listant des filiÃ¨res en informatique et management.",
+    highlights: ["RÃ©seaux", "TÃ©lÃ©coms", "SystÃ¨mes"],
+    outcomes: ["Technicien rÃ©seaux", "Admin junior", "Support tÃ©lÃ©coms"],
     accent: "from-orange-400/15 via-amber-300/20 to-transparent",
   },
   {
@@ -632,24 +675,24 @@ const programs = [
     field: "Business",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
+    intake: "RentrÃ©e Octobre 2026",
     title: "Licence Management des Entreprises et Gestion des Projets",
-    institution: "Institut Facultaire d’Informatique et de Management (IFIM)",
+    institution: "Institut Facultaire dâ€™Informatique et de Management (IFIM)",
     handle: "@ifim_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "700",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Filière en management des entreprises et gestion de projets.",
+      "FiliÃ¨re en management des entreprises et gestion de projets.",
     institutionBio:
-      "Établissement supérieur gabonais listant des filières en informatique et management.",
+      "Ã‰tablissement supÃ©rieur gabonais listant des filiÃ¨res en informatique et management.",
     highlights: ["Management", "Gestion de projet", "Organisation"],
-    outcomes: ["Assistant manager", "Chef de projet junior", "Chargé d’études"],
+    outcomes: ["Assistant manager", "Chef de projet junior", "ChargÃ© dâ€™Ã©tudes"],
     accent: "from-orange-300/15 via-pink-300/20 to-transparent",
   },
   {
@@ -657,24 +700,24 @@ const programs = [
     field: "Tech",
     degree: "Licence Pro (Bac+3)",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence Pro Cybersécurité",
-    institution: "École Supérieure d’Ingénierie et d’Innovation Technologique (ESIITECH)",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence Pro CybersÃ©curitÃ©",
+    institution: "Ã‰cole SupÃ©rieure dâ€™IngÃ©nierie et dâ€™Innovation Technologique (ESIITECH)",
     handle: "@esiitech_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "820",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Licence informatique orientée cyber défense.",
+      "Licence informatique orientÃ©e cyber dÃ©fense.",
     institutionBio:
-      "École supérieure gabonaise proposant des licences et masters informatiques.",
-    highlights: ["Cyber défense", "Sécurité", "Réseaux"],
-    outcomes: ["Analyste SOC junior", "Technicien sécurité", "Admin systèmes"],
+      "Ã‰cole supÃ©rieure gabonaise proposant des licences et masters informatiques.",
+    highlights: ["Cyber dÃ©fense", "SÃ©curitÃ©", "RÃ©seaux"],
+    outcomes: ["Analyste SOC junior", "Technicien sÃ©curitÃ©", "Admin systÃ¨mes"],
     accent: "from-pink-400/15 via-orange-300/20 to-transparent",
   },
   {
@@ -682,24 +725,24 @@ const programs = [
     field: "Tech",
     degree: "Licence Pro (Bac+3)",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence Pro Développement Web",
-    institution: "École Supérieure d’Ingénierie et d’Innovation Technologique (ESIITECH)",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence Pro DÃ©veloppement Web",
+    institution: "Ã‰cole SupÃ©rieure dâ€™IngÃ©nierie et dâ€™Innovation Technologique (ESIITECH)",
     handle: "@esiitech_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "780",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Licence informatique en développement web et mobile.",
+      "Licence informatique en dÃ©veloppement web et mobile.",
     institutionBio:
-      "École supérieure gabonaise proposant des licences et masters informatiques.",
+      "Ã‰cole supÃ©rieure gabonaise proposant des licences et masters informatiques.",
     highlights: ["Web", "Mobile", "Full-stack"],
-    outcomes: ["Développeur web", "Développeur mobile", "Intégrateur"],
+    outcomes: ["DÃ©veloppeur web", "DÃ©veloppeur mobile", "IntÃ©grateur"],
     accent: "from-orange-300/15 via-pink-300/20 to-transparent",
   },
   {
@@ -707,24 +750,24 @@ const programs = [
     field: "Tech",
     degree: "Licence Pro (Bac+3)",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence Pro Monétique",
-    institution: "École Supérieure d’Ingénierie et d’Innovation Technologique (ESIITECH)",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence Pro MonÃ©tique",
+    institution: "Ã‰cole SupÃ©rieure dâ€™IngÃ©nierie et dâ€™Innovation Technologique (ESIITECH)",
     handle: "@esiitech_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "860",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Licence professionnelle en monétique et services de paiement.",
+      "Licence professionnelle en monÃ©tique et services de paiement.",
     institutionBio:
-      "École supérieure gabonaise proposant des formations Bac+3 dans les nouvelles technologies.",
-    highlights: ["Monétique", "Paiements", "Systèmes"],
-    outcomes: ["Technicien monétique", "Support paiement", "Opérateur SI"],
+      "Ã‰cole supÃ©rieure gabonaise proposant des formations Bac+3 dans les nouvelles technologies.",
+    highlights: ["MonÃ©tique", "Paiements", "SystÃ¨mes"],
+    outcomes: ["Technicien monÃ©tique", "Support paiement", "OpÃ©rateur SI"],
     accent: "from-rose-400/15 via-orange-300/20 to-transparent",
   },
   {
@@ -732,24 +775,24 @@ const programs = [
     field: "Tech",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence Économie, Finance, Banques et Assurances",
-    institution: "Institut Facultaire d’Informatique et de Management (IFIM)",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence Ã‰conomie, Finance, Banques et Assurances",
+    institution: "Institut Facultaire dâ€™Informatique et de Management (IFIM)",
     handle: "@ifim_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "720",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Filière en économie, finance, banques et assurances.",
+      "FiliÃ¨re en Ã©conomie, finance, banques et assurances.",
     institutionBio:
-      "Établissement supérieur gabonais listant des filières en informatique et management.",
+      "Ã‰tablissement supÃ©rieur gabonais listant des filiÃ¨res en informatique et management.",
     highlights: ["Finance", "Banque", "Assurance"],
-    outcomes: ["Assistant financier", "Chargé clientèle", "Analyste junior"],
+    outcomes: ["Assistant financier", "ChargÃ© clientÃ¨le", "Analyste junior"],
     accent: "from-orange-300/15 via-pink-300/20 to-transparent",
   },
   {
@@ -757,24 +800,24 @@ const programs = [
     field: "Business",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
+    intake: "RentrÃ©e Octobre 2026",
     title: "Licence Administration des Entreprises, Ressources Humaines",
-    institution: "Institut Facultaire d’Informatique et de Management (IFIM)",
+    institution: "Institut Facultaire dâ€™Informatique et de Management (IFIM)",
     handle: "@ifim_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "690",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Filière administration des entreprises et ressources humaines.",
+      "FiliÃ¨re administration des entreprises et ressources humaines.",
     institutionBio:
-      "Établissement supérieur gabonais listant des filières en informatique et management.",
+      "Ã‰tablissement supÃ©rieur gabonais listant des filiÃ¨res en informatique et management.",
     highlights: ["Administration", "RH", "Organisation"],
-    outcomes: ["Assistant RH", "Chargé administratif", "Gestionnaire junior"],
+    outcomes: ["Assistant RH", "ChargÃ© administratif", "Gestionnaire junior"],
     accent: "from-pink-400/15 via-orange-300/20 to-transparent",
   },
   {
@@ -782,49 +825,49 @@ const programs = [
     field: "Business",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
+    intake: "RentrÃ©e Octobre 2026",
     title: "Licence Achat, Logistique, Douanes et Transport International",
-    institution: "Institut Facultaire d’Informatique et de Management (IFIM)",
+    institution: "Institut Facultaire dâ€™Informatique et de Management (IFIM)",
     handle: "@ifim_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "760",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1512436991641-6745cdb1723f?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Filière achat, logistique, douanes et transport international.",
+      "FiliÃ¨re achat, logistique, douanes et transport international.",
     institutionBio:
-      "Établissement supérieur gabonais listant des filières en informatique et management.",
+      "Ã‰tablissement supÃ©rieur gabonais listant des filiÃ¨res en informatique et management.",
     highlights: ["Achats", "Logistique", "Transport"],
-    outcomes: ["Assistant logistique", "Agent transit", "Chargé achats"],
+    outcomes: ["Assistant logistique", "Agent transit", "ChargÃ© achats"],
     accent: "from-orange-400/15 via-amber-300/20 to-transparent",
   },
   {
     id: 33,
-    field: "Ingénierie",
+    field: "IngÃ©nierie",
     degree: "Licence",
     duration: "3 ans",
-    intake: "Rentrée Octobre 2026",
-    title: "Licence (Filières sciences et ingénierie)",
-    institution: "Institut Supérieur d’Ingénierie (ISI)",
+    intake: "RentrÃ©e Octobre 2026",
+    title: "Licence (FiliÃ¨res sciences et ingÃ©nierie)",
+    institution: "Institut SupÃ©rieur dâ€™IngÃ©nierie (ISI)",
     handle: "@isi_gabon",
     city: "Libreville, Gabon",
     country: "Gabon",
-    tuition: "Frais selon filière",
-    mode: "Présentiel",
+    tuition: "Frais selon filiÃ¨re",
+    mode: "PrÃ©sentiel",
     saves: "740",
     contacts: "Admissions en cours",
     image:
       "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1600&q=80",
     summary:
-      "Filières de sciences et ingénierie listées par l’ISI: biomédical, informatique, électronique, maintenance, mines, pétrole & gaz, production.",
+      "FiliÃ¨res de sciences et ingÃ©nierie listÃ©es par lâ€™ISI: biomÃ©dical, informatique, Ã©lectronique, maintenance, mines, pÃ©trole & gaz, production.",
     institutionBio:
-      "Institut privé d’ingénierie accrédité par le ministère de l’Enseignement supérieur gabonais.",
-    highlights: ["Génie biomédical", "Génie informatique", "Génie électronique"],
-    outcomes: ["Assistant ingénieur", "Technicien production", "Support technique"],
+      "Institut privÃ© dâ€™ingÃ©nierie accrÃ©ditÃ© par le ministÃ¨re de lâ€™Enseignement supÃ©rieur gabonais.",
+    highlights: ["GÃ©nie biomÃ©dical", "GÃ©nie informatique", "GÃ©nie Ã©lectronique"],
+    outcomes: ["Assistant ingÃ©nieur", "Technicien production", "Support technique"],
     accent: "from-orange-300/15 via-pink-300/20 to-transparent",
   },
 ];
@@ -836,9 +879,9 @@ function FilterPanel({ selectedFilter, setSelectedFilter, open, setOpen }) {
     <div className="absolute right-4 top-[72px] z-50 w-[92vw] max-w-[340px] rounded-[28px] border border-[#f3d6dd] bg-white p-4 shadow-2xl shadow-pink-100 lg:right-6">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="text-sm font-semibold text-slate-900">Recherche par filière</div>
+          <div className="text-sm font-semibold text-slate-900">{fixText("Recherche par filière")}</div>
           <div className="mt-1 text-xs leading-5 text-slate-500">
-            Les filtres restent discrets dans le feed et servent surtout à la recherche ciblée.
+            {fixText("Les filtres restent discrets dans le feed et servent surtout à la recherche ciblée.")}
           </div>
         </div>
         <button onClick={() => setOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100">
@@ -849,17 +892,17 @@ function FilterPanel({ selectedFilter, setSelectedFilter, open, setOpen }) {
       <div className="mt-4 flex flex-wrap gap-2">
         {filters.map((filter) => {
           const Icon = filter.icon;
-          const active = selectedFilter === filter.id;
+          const active = selectedFilter === fixText(filter.id);
           return (
             <button
               key={filter.id}
-              onClick={() => setSelectedFilter(filter.id)}
+              onClick={() => setSelectedFilter(fixText(filter.id))}
               className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm ${
                 active ? "bg-slate-900 text-white" : "bg-[#fff4f6] text-slate-700 hover:bg-[#ffe8ec]"
               }`}
             >
               <Icon className="h-4 w-4" />
-              {filter.label}
+              {fixText(filter.label)}
             </button>
           );
         })}
@@ -878,19 +921,19 @@ function AuthModal({ open, onClose, onLogin, onOpenPublish, onOpenAdmin }) {
         <div className="grid w-full overflow-hidden rounded-[36px] border border-[#f1d8de] bg-white shadow-2xl shadow-pink-100 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="hidden bg-[linear-gradient(160deg,#fff1f5,#fff7ed)] p-8 lg:block">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs uppercase tracking-[0.2em] text-slate-700 shadow-sm">
-              <School className="h-3.5 w-3.5 text-pink-500" /> Marketplace d’enseignement supérieur
+              <School className="h-3.5 w-3.5 text-pink-500" /> Marketplace dâ€™enseignement supÃ©rieur
             </div>
-            <h3 className="mt-6 text-3xl font-semibold text-slate-900">Identifier les établissements. Orienter les étudiants. Simplifier la mise en relation.</h3>
+            <h3 className="mt-6 text-3xl font-semibold text-slate-900">Identifier les Ã©tablissements. Orienter les Ã©tudiants. Simplifier la mise en relation.</h3>
             <p className="mt-4 max-w-md text-sm leading-7 text-slate-600">
-              Le feed reste consultable librement. Les établissements se connectent pour publier, et les usagers peuvent créer un compte pour enregistrer, comparer et contacter.
+              Le feed reste consultable librement. Les Ã©tablissements se connectent pour publier, et les usagers peuvent crÃ©er un compte pour enregistrer, comparer et contacter.
             </p>
           </div>
 
           <div className="p-6 lg:p-8">
             <div className="flex items-center justify-between">
               <div>
-                <div className="text-lg font-semibold text-slate-900">Accès à la plateforme</div>
-                <div className="mt-1 text-sm text-slate-500">Compte établissement ou compte usager</div>
+                <div className="text-lg font-semibold text-slate-900">AccÃ¨s Ã  la plateforme</div>
+                <div className="mt-1 text-sm text-slate-500">Compte Ã©tablissement ou compte usager</div>
               </div>
               <button onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100">
                 <X className="h-4 w-4" />
@@ -902,7 +945,7 @@ function AuthModal({ open, onClose, onLogin, onOpenPublish, onOpenAdmin }) {
                 Usager
               </button>
               <button onClick={() => setMode("institution")} className={`flex-1 rounded-full px-4 py-2.5 text-sm ${mode === "institution" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}>
-                Établissement
+                Ã‰tablissement
               </button>
               <button onClick={onOpenAdmin} className="rounded-full px-4 py-2.5 text-sm text-slate-600 hover:bg-white">
                 Admin
@@ -912,13 +955,13 @@ function AuthModal({ open, onClose, onLogin, onOpenPublish, onOpenAdmin }) {
             <div className="mt-6 grid gap-4">
               <input className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Email" />
               <input className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Mot de passe" type="password" />
-              {mode === "institution" && <input className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Nom de l’établissement" />}
+              {mode === "institution" && <input className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Nom de lâ€™Ã©tablissement" />}
             </div>
 
             <div className="mt-6 space-y-3 rounded-[26px] border border-[#f4d8df] bg-[#fff8fa] p-4 text-sm text-slate-600">
               <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-pink-500" /> Consultation libre des offres de formation.</div>
-              <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-pink-500" /> Publication réservée aux établissements connectés.</div>
-              <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-pink-500" /> Sauvegarde et prise de contact simplifiées pour les usagers.</div>
+              <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-pink-500" /> Publication rÃ©servÃ©e aux Ã©tablissements connectÃ©s.</div>
+              <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-pink-500" /> Sauvegarde et prise de contact simplifiÃ©es pour les usagers.</div>
             </div>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -951,7 +994,7 @@ function PublishDrawer({ open, onClose, currentUser }) {
         <div className="flex items-center justify-between">
           <div>
             <div className="text-lg font-semibold text-slate-900">Publier une offre de formation</div>
-            <div className="mt-1 text-sm text-slate-500">Réservé aux établissements identifiés</div>
+            <div className="mt-1 text-sm text-slate-500">RÃ©servÃ© aux Ã©tablissements identifiÃ©s</div>
           </div>
           <button onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100">
             <X className="h-4 w-4" />
@@ -963,11 +1006,11 @@ function PublishDrawer({ open, onClose, currentUser }) {
         </div>
 
         <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Intitulé de la formation" />
+          <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm text-slate-900 outline-none" placeholder="IntitulÃ© de la formation" />
           <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Ville / Pays" />
           <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Niveau (Licence, Master...)" />
-          <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Coût ou fourchette" />
-          <textarea className="md:col-span-2 rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm text-slate-900 outline-none" rows={4} placeholder="Résumé de l’offre" />
+          <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm text-slate-900 outline-none" placeholder="CoÃ»t ou fourchette" />
+          <textarea className="md:col-span-2 rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm text-slate-900 outline-none" rows={4} placeholder="RÃ©sumÃ© de lâ€™offre" />
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
@@ -980,32 +1023,34 @@ function PublishDrawer({ open, onClose, currentUser }) {
 }
 
 function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSelectedFilter, filterOpen, setFilterOpen, soundEnabled, soundVolume, onVolumeChange, onToggleSound, onOpenAuth, onPublishRequest, currentUser }) {
-  const selectedLabel = filters.find((f) => f.id === selectedFilter)?.label || "Toutes les filières";
+  const selectedLabel = fixText(
+    filters.find((f) => fixText(f.id) === selectedFilter)?.label || "Toutes les filières"
+  );
 
   return (
     <div className="fixed inset-x-0 top-0 z-40 border-b border-[#f3dce2] bg-white/90 backdrop-blur-xl">
       <div className="relative mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 gap-y-2 px-4 py-3 lg:px-6">
         <div className="flex items-center">
-          <div className="flex h-16 w-[190px] items-center justify-center overflow-hidden rounded-xl bg-white px-2 shadow-lg shadow-pink-100 sm:h-[72px] sm:w-[240px]">
-            <img src="/logo-studysia.jpg" alt="Studysia" className="h-full w-full object-contain" />
+          <div className="flex h-16 w-[220px] items-center justify-center overflow-hidden sm:h-20 sm:w-[300px]">
+            <img src="/logo-studysia.jpg" alt="Studysia" className="h-full w-full object-cover" />
           </div>
         </div>
 
         {activeTab === "search" ? (
-          <div className="hidden min-w-0 flex-1 lg:flex lg:justify-center">
+          <div className="min-w-0 flex-1 lg:justify-center">
             <div className="relative w-full max-w-xl">
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-full border border-[#f0dde2] bg-white py-3 pl-11 pr-5 text-sm text-slate-900 outline-none"
-                placeholder="Rechercher une formation ou un établissement"
+                placeholder="Rechercher une formation, une ville, un pays, un établissement"
               />
             </div>
           </div>
         ) : (
           <div className="hidden lg:block text-xs uppercase tracking-[0.2em] text-slate-400">
-            feed fluide • filtre actif : {selectedLabel}
+            feed fluide â€¢ filtre actif : {selectedLabel}
           </div>
         )}
 
@@ -1097,12 +1142,12 @@ function ProgramSlide({ item, onViewOffer }) {
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <div className="rounded-2xl bg-[#fff8fa] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Établissement</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Ã‰tablissement</div>
               <div className="mt-2 text-sm font-semibold text-slate-900">{item.institution}</div>
               <div className="mt-1 flex items-center gap-1 text-xs text-slate-500"><MapPin className="h-3.5 w-3.5" /> {item.city}</div>
             </div>
             <div className="rounded-2xl bg-[#fff8fa] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Infos clés</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Infos clÃ©s</div>
               <div className="mt-2 text-sm text-slate-700">{item.duration}</div>
               <div className="mt-1 text-sm text-slate-700">{item.tuition}</div>
             </div>
@@ -1138,7 +1183,7 @@ function InstitutionSlide({ item }) {
             <div className="mt-5 grid grid-cols-3 gap-3">
               {[
                 [item.degree, "niveau"],
-                [item.duration, "durée"],
+                [item.duration, "durÃ©e"],
                 [item.mode, "format"],
               ].map(([value, label]) => (
                 <div key={label} className="rounded-2xl bg-[#fff8fa] p-3 text-center">
@@ -1159,15 +1204,15 @@ function InstitutionSlide({ item }) {
               <div className="text-lg font-semibold text-slate-900">Points forts</div>
               <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
                 {item.highlights.map((h) => (
-                  <p key={h}>• {h}</p>
+                  <p key={h}>â€¢ {h}</p>
                 ))}
               </div>
             </div>
             <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
-              <div className="text-lg font-semibold text-slate-900">Débouchés</div>
+              <div className="text-lg font-semibold text-slate-900">DÃ©bouchÃ©s</div>
               <div className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
                 {item.outcomes.map((o) => (
-                  <p key={o}>• {o}</p>
+                  <p key={o}>â€¢ {o}</p>
                 ))}
               </div>
             </div>
@@ -1190,10 +1235,14 @@ function FeedSection({ item, onViewOffer }) {
 
 function SearchScreen({ searchQuery, setSearchQuery, selectedFilter, setSelectedFilter, onViewOffer, programsData }) {
   const results = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
+    const q = normalizeText(searchQuery);
     return programsData.filter((item) => {
-      const matchFilter = selectedFilter === "Tous" || item.field === selectedFilter;
-      const haystack = `${item.title} ${item.institution} ${item.city} ${item.summary}`.toLowerCase();
+      const matchFilter =
+        selectedFilter === "Tous" ||
+        normalizeText(item.field) === normalizeText(selectedFilter);
+      const haystack = normalizeText(
+        `${item.title} ${item.institution} ${item.city} ${item.country} ${item.summary}`
+      );
       const matchQuery = !q || haystack.includes(q);
       return matchFilter && matchQuery;
     });
@@ -1204,23 +1253,13 @@ function SearchScreen({ searchQuery, setSearchQuery, selectedFilter, setSelected
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
           <div className="rounded-[30px] border border-[#f1dde3] bg-white p-5 shadow-lg shadow-pink-50 lg:p-6">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-full border border-[#f0dde2] bg-white py-3 pl-11 pr-5 text-sm text-slate-900 outline-none"
-                placeholder="Rechercher une formation, une ville, un établissement"
-              />
-            </div>
-
             <div className="mt-4 flex flex-wrap gap-2">
               {filters.map((filter) => {
                 const Icon = filter.icon;
-                const active = selectedFilter === filter.id;
+                const active = selectedFilter === fixText(filter.id);
                 return (
-                  <button key={filter.id} onClick={() => setSelectedFilter(filter.id)} className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm ${active ? "bg-slate-900 text-white" : "bg-[#fff4f6] text-slate-700"}`}>
-                    <Icon className="h-4 w-4" /> {filter.label}
+                  <button key={filter.id} onClick={() => setSelectedFilter(fixText(filter.id))} className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm ${active ? "bg-slate-900 text-white" : "bg-[#fff4f6] text-slate-700"}`}>
+                    <Icon className="h-4 w-4" /> {fixText(filter.label)}
                   </button>
                 );
               })}
@@ -1271,7 +1310,7 @@ function OfferDetailScreen({ item, onBack, onOpenInstitution, programsData }) {
     return (
       <div className="min-h-screen bg-white px-4 pb-28 pt-24 lg:px-6">
         <div className="mx-auto max-w-3xl rounded-[30px] border border-[#f1dde3] bg-white p-8 text-center shadow-lg shadow-pink-50">
-          <div className="text-xl font-semibold text-slate-900">Aucune offre sélectionnée</div>
+          <div className="text-xl font-semibold text-slate-900">Aucune offre sÃ©lectionnÃ©e</div>
           <button
             onClick={onBack}
             className="mt-6 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white"
@@ -1284,7 +1323,7 @@ function OfferDetailScreen({ item, onBack, onOpenInstitution, programsData }) {
   }
 
   const phone = (item.whatsapp || WHATSAPP_FALLBACK).replace(/\D/g, "");
-  const message = `Bonjour, je souhaite des informations sur "${item.title}" à ${item.institution}.`;
+  const message = `Bonjour, je souhaite des informations sur "${item.title}" Ã  ${item.institution}.`;
   const waLink = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
   const admission = item.admission || DEFAULT_ADMISSION;
   const contact = item.contact || DEFAULT_CONTACT;
@@ -1297,7 +1336,7 @@ function OfferDetailScreen({ item, onBack, onOpenInstitution, programsData }) {
   ).slice(0, 5);
   const related = programsData.filter((p) => p.institution === item.institution && p.id !== item.id);
   const grouped = related.reduce((acc, p) => {
-    const key = `${p.degree} • ${p.field}`;
+    const key = `${p.degree} â€¢ ${p.field}`;
     if (!acc[key]) acc[key] = [];
     acc[key].push(p);
     return acc;
@@ -1327,26 +1366,26 @@ function OfferDetailScreen({ item, onBack, onOpenInstitution, programsData }) {
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
               <div className="rounded-2xl bg-[#fff8fa] p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Coût</div>
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-400">CoÃ»t</div>
                 <div className="mt-2 text-sm text-slate-700">{item.tuition}</div>
               </div>
               <div className="rounded-2xl bg-[#fff8fa] p-4">
-                <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Condition d’admission</div>
+                <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Condition dâ€™admission</div>
                 <div className="mt-2 text-sm text-slate-700">{admission}</div>
               </div>
             </div>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
               <div className="rounded-[24px] border border-[#f1dde3] bg-[#fff9fa] p-5">
-                <div className="text-sm font-semibold text-slate-900">Débouchés</div>
+                <div className="text-sm font-semibold text-slate-900">DÃ©bouchÃ©s</div>
                 <div className="mt-3 space-y-2 text-sm text-slate-600">
                   {item.outcomes.map((o) => (
-                    <div key={o}>• {o}</div>
+                    <div key={o}>â€¢ {o}</div>
                   ))}
                 </div>
               </div>
               <div className="rounded-[24px] border border-[#f1dde3] bg-[#fff9fa] p-5">
-                <div className="text-sm font-semibold text-slate-900">Contact établissement</div>
+                <div className="text-sm font-semibold text-slate-900">Contact Ã©tablissement</div>
                 <div className="mt-3 text-sm text-slate-600">{contact}</div>
                 <a
                   href={waLink}
@@ -1392,7 +1431,7 @@ function InstitutionDetailScreen({ item, onBack, onViewOffer, programsData }) {
   ).slice(0, 5);
   const related = programsData.filter((p) => p.institution === item.institution);
   const grouped = related.reduce((acc, p) => {
-    const key = `${p.degree} • ${p.field}`;
+    const key = `${p.degree} â€¢ ${p.field}`;
     if (!acc[key]) acc[key] = [];
     acc[key].push(p);
     return acc;
@@ -1404,8 +1443,8 @@ function InstitutionDetailScreen({ item, onBack, onViewOffer, programsData }) {
         <div className="overflow-hidden rounded-[30px] border border-[#f1dde3] bg-white shadow-lg shadow-pink-50">
           <div className="p-6">
             <div className="flex items-start gap-4">
-              <div className="flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-[24px] bg-white ring-1 ring-[#f1dde3]">
-                <img src={item.logo || GENERIC_LOGO} alt={`${item.institution} logo`} className="h-full w-full object-cover" />
+              <div className="flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-[24px] bg-white p-1 ring-1 ring-[#f1dde3]">
+                <img src={item.logo || GENERIC_LOGO} alt={`${item.institution} logo`} className="h-full w-full object-contain" />
               </div>
               <div>
                 <div className="text-xl font-semibold text-slate-900">{item.institution}</div>
@@ -1467,7 +1506,7 @@ function InstitutionDetailScreen({ item, onBack, onViewOffer, programsData }) {
                           onClick={() => onViewOffer?.(p)}
                           className="block text-left text-slate-700 hover:text-slate-900"
                         >
-                          • {p.title}
+                          â€¢ {p.title}
                         </button>
                       ))}
                     </div>
@@ -1530,14 +1569,14 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
 
   const loadInstitutions = async () => {
     if (!apiUrl) return;
-    const res = await fetch(`${apiUrl}/api/institutions`);
+    const res = await fetch(`${apiUrl}/api/institutions?include_inactive=1`);
     const data = await res.json();
     setInstitutions(data);
   };
 
   const loadPrograms = async () => {
     if (!apiUrl) return;
-    const res = await fetch(`${apiUrl}/api/programs`);
+    const res = await fetch(`${apiUrl}/api/programs?include_inactive=1`);
     const data = await res.json();
     setProgramsList(data);
   };
@@ -1561,7 +1600,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     const data = await res.json();
     if (res.ok && data.token) {
       onLogin(data.token);
-      setStatus("Connecté");
+      setStatus("ConnectÃ©");
     } else {
       setStatus(data.error || "Erreur de connexion");
     }
@@ -1572,10 +1611,10 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     const city = form.city.trim();
     const country = form.country.trim();
     if (!name || !city || !country) {
-      setStatus("Ville, pays et nom sont obligatoires pour l’établissement.");
+      setStatus("Ville, pays et nom sont obligatoires pour lâ€™Ã©tablissement.");
       return;
     }
-    setStatus("Création établissement...");
+    setStatus("CrÃ©ation Ã©tablissement...");
     const res = await fetch(`${apiUrl}/api/institutions${editingInstitutionId ? `/${editingInstitutionId}` : ""}`, {
       method: editingInstitutionId ? "PUT" : "POST",
       headers: {
@@ -1586,7 +1625,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     });
     const data = await res.json();
     if (res.ok) {
-      setStatus(editingInstitutionId ? "Établissement mis à jour" : "Établissement créé");
+      setStatus(editingInstitutionId ? "Ã‰tablissement mis Ã  jour" : "Ã‰tablissement crÃ©Ã©");
       setEditingInstitutionId(null);
       setForm({ ...form, name: "", handle: "", address: "", contact: "", whatsapp: "", logo_url: "" });
       await loadInstitutions();
@@ -1597,23 +1636,23 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
   };
 
   const deleteInstitution = async (id) => {
-    if (!confirm("Supprimer cet établissement ?")) return;
+    if (!confirm("Supprimer cet Ã©tablissement ?")) return;
     const res = await fetch(`${apiUrl}/api/institutions/${id}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    setStatus(res.ok ? "Établissement supprimé" : data.error || "Erreur");
+    setStatus(res.ok ? "Ã‰tablissement supprimÃ©" : data.error || "Erreur");
     await loadInstitutions();
   };
 
   const createProgram = async () => {
     const admission = programForm.admission.trim();
     if (!admission) {
-      setStatus("La condition d’accès est obligatoire pour la formation.");
+      setStatus("La condition dâ€™accÃ¨s est obligatoire pour la formation.");
       return;
     }
-    setStatus("Création formation...");
+    setStatus("CrÃ©ation formation...");
     const payload = {
       ...programForm,
       admission,
@@ -1630,7 +1669,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     });
     const data = await res.json();
     if (res.ok) {
-      setStatus(editingProgramId ? "Formation mise à jour" : "Formation créée");
+      setStatus(editingProgramId ? "Formation mise Ã  jour" : "Formation crÃ©Ã©e");
       setEditingProgramId(null);
       setProgramForm({ ...programForm, title: "", summary: "", highlights: "", outcomes: "", image_url: "" });
       await loadPrograms();
@@ -1646,7 +1685,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       headers: { Authorization: `Bearer ${token}` },
     });
     const data = await res.json();
-    setStatus(res.ok ? "Formation supprimée" : data.error || "Erreur");
+    setStatus(res.ok ? "Formation supprimÃ©e" : data.error || "Erreur");
   };
 
   const uploadImage = async (file) => {
@@ -1663,7 +1702,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     setUploading(false);
     if (res.ok) {
       setProgramForm({ ...programForm, image_url: `${apiUrl}${data.url}` });
-      setStatus("Image uploadée");
+      setStatus("Image uploadÃ©e");
     } else {
       setStatus(data.error || "Erreur upload");
     }
@@ -1697,7 +1736,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     }
     setGalleryUploading(false);
     setGalleryFiles([]);
-    setStatus("Galerie mise à jour");
+    setStatus("Galerie mise Ã  jour");
   };
 
   const editInstitution = (inst) => {
@@ -1832,7 +1871,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         }),
       });
     }
-    setStatus("Import CSV terminé");
+    setStatus("Import CSV terminÃ©");
     await loadInstitutions();
     await loadPrograms();
   };
@@ -1891,7 +1930,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         }),
       });
     }
-    setStatus("Seed terminé");
+    setStatus("Seed terminÃ©");
     await loadInstitutions();
   };
 
@@ -1915,9 +1954,9 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     <div className="min-h-screen bg-white px-4 pb-28 pt-24 lg:px-6">
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
-          <div className="text-lg font-semibold text-slate-900">Admin - Données</div>
+          <div className="text-lg font-semibold text-slate-900">Admin - DonnÃ©es</div>
           <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={seedSample} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Seed données démo</button>
+            <button onClick={seedSample} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Seed donnÃ©es dÃ©mo</button>
             <button onClick={exportCSV} className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">Exporter CSV</button>
             <label className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">
               Importer CSV
@@ -1929,7 +1968,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         </div>
 
         <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
-          <div className="text-lg font-semibold text-slate-900">Créer un établissement</div>
+          <div className="text-lg font-semibold text-slate-900">CrÃ©er un Ã©tablissement</div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Nom" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Handle" value={form.handle} onChange={(e) => setForm({ ...form, handle: e.target.value })} />
@@ -1940,13 +1979,13 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="WhatsApp" value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Logo URL" value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} />
           </div>
-          <button onClick={createInstitution} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Créer</button>
+          <button onClick={createInstitution} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">CrÃ©er</button>
           <div className="mt-5 space-y-2">
             {institutions.map((i) => (
               <div key={i.id} className="flex items-center justify-between rounded-2xl border border-[#f1dde3] bg-[#fff9fa] px-4 py-3 text-sm">
                 <div>{i.name}</div>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => editInstitution(i)} className="text-slate-600 hover:text-slate-900">Éditer</button>
+                  <button onClick={() => editInstitution(i)} className="text-slate-600 hover:text-slate-900">Ã‰diter</button>
                   <button onClick={() => deleteInstitution(i.id)} className="text-slate-600 hover:text-slate-900">Supprimer</button>
                 </div>
               </div>
@@ -1955,24 +1994,24 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         </div>
 
         <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
-          <div className="text-lg font-semibold text-slate-900">Créer une formation</div>
+          <div className="text-lg font-semibold text-slate-900">CrÃ©er une formation</div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <select className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" value={programForm.institution_id} onChange={(e) => setProgramForm({ ...programForm, institution_id: e.target.value })}>
-              <option value="">Établissement</option>
+              <option value="">Ã‰tablissement</option>
               {institutions.map((i) => (
                 <option key={i.id} value={i.id}>{i.name}</option>
               ))}
             </select>
-            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Filière" value={programForm.field} onChange={(e) => setProgramForm({ ...programForm, field: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="FiliÃ¨re" value={programForm.field} onChange={(e) => setProgramForm({ ...programForm, field: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Niveau" value={programForm.degree} onChange={(e) => setProgramForm({ ...programForm, degree: e.target.value })} />
-            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Durée" value={programForm.duration} onChange={(e) => setProgramForm({ ...programForm, duration: e.target.value })} />
-            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Rentrée" value={programForm.intake} onChange={(e) => setProgramForm({ ...programForm, intake: e.target.value })} />
-            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Intitulé" value={programForm.title} onChange={(e) => setProgramForm({ ...programForm, title: e.target.value })} />
-            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Coût" value={programForm.tuition} onChange={(e) => setProgramForm({ ...programForm, tuition: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="DurÃ©e" value={programForm.duration} onChange={(e) => setProgramForm({ ...programForm, duration: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="RentrÃ©e" value={programForm.intake} onChange={(e) => setProgramForm({ ...programForm, intake: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="IntitulÃ©" value={programForm.title} onChange={(e) => setProgramForm({ ...programForm, title: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="CoÃ»t" value={programForm.tuition} onChange={(e) => setProgramForm({ ...programForm, tuition: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Mode" value={programForm.mode} onChange={(e) => setProgramForm({ ...programForm, mode: e.target.value })} />
-            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Condition d’accès *" value={programForm.admission} onChange={(e) => setProgramForm({ ...programForm, admission: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Condition dâ€™accÃ¨s *" value={programForm.admission} onChange={(e) => setProgramForm({ ...programForm, admission: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Points forts (comma)" value={programForm.highlights} onChange={(e) => setProgramForm({ ...programForm, highlights: e.target.value })} />
-            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Débouchés (comma)" value={programForm.outcomes} onChange={(e) => setProgramForm({ ...programForm, outcomes: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="DÃ©bouchÃ©s (comma)" value={programForm.outcomes} onChange={(e) => setProgramForm({ ...programForm, outcomes: e.target.value })} />
           </div>
           <textarea className="mt-3 w-full rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Description" rows={3} value={programForm.summary} onChange={(e) => setProgramForm({ ...programForm, summary: e.target.value })} />
           <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -1993,13 +2032,13 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
             </button>
             {galleryUploading && <span className="text-sm text-slate-500">Upload...</span>}
           </div>
-          <button onClick={createProgram} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Créer</button>
+          <button onClick={createProgram} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">CrÃ©er</button>
           <div className="mt-5 space-y-2">
             {programsList.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-2xl border border-[#f1dde3] bg-[#fff9fa] px-4 py-3 text-sm">
                 <div>{p.title}</div>
                 <div className="flex items-center gap-3">
-                  <button onClick={() => editProgram(p)} className="text-slate-600 hover:text-slate-900">Éditer</button>
+                  <button onClick={() => editProgram(p)} className="text-slate-600 hover:text-slate-900">Ã‰diter</button>
                   <button onClick={() => deleteProgram(p.id)} className="text-slate-600 hover:text-slate-900">Supprimer</button>
                 </div>
               </div>
@@ -2013,9 +2052,9 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
 
 function InboxScreen({ currentUser, onOpenAuth }) {
   const messages = [
-    ["Université Horizon", "Votre demande d’informations a bien été reçue."],
-    ["Institut Tech Afrique", "Une brochure détaillée est disponible pour ce programme."],
-    ["Campus Santé Dakar", "Les admissions sont encore ouvertes pour la session de septembre."],
+    ["UniversitÃ© Horizon", "Votre demande dâ€™informations a bien Ã©tÃ© reÃ§ue."],
+    ["Institut Tech Afrique", "Une brochure dÃ©taillÃ©e est disponible pour ce programme."],
+    ["Campus SantÃ© Dakar", "Les admissions sont encore ouvertes pour la session de septembre."],
   ];
 
   if (!currentUser) {
@@ -2025,8 +2064,8 @@ function InboxScreen({ currentUser, onOpenAuth }) {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-[#fff4f6] text-slate-700">
             <Lock className="h-7 w-7" />
           </div>
-          <div className="mt-5 text-2xl font-semibold text-slate-900">Messagerie réservée aux comptes</div>
-          <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-slate-600">Connectez-vous pour échanger avec les établissements et suivre vos demandes.</p>
+          <div className="mt-5 text-2xl font-semibold text-slate-900">Messagerie rÃ©servÃ©e aux comptes</div>
+          <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-slate-600">Connectez-vous pour Ã©changer avec les Ã©tablissements et suivre vos demandes.</p>
           <button onClick={onOpenAuth} className="mt-6 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Se connecter</button>
         </div>
       </div>
@@ -2058,18 +2097,18 @@ function ProfileScreen({ currentUser, onOpenAuth, onPublishRequest, programsData
           <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-[#fff4f6] px-4 py-2 text-xs uppercase tracking-[0.22em] text-slate-600">
-                <Lock className="h-3.5 w-3.5" /> Compte usager ou établissement
+                <Lock className="h-3.5 w-3.5" /> Compte usager ou Ã©tablissement
               </div>
-              <div className="mt-5 text-3xl font-semibold text-slate-900">Un compte permet d’aller plus loin.</div>
-              <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">Créer un compte pour sauvegarder, contacter, comparer ou publier si vous êtes un établissement.</p>
-              <button onClick={onOpenAuth} className="mt-6 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Créer ou connecter un compte</button>
+              <div className="mt-5 text-3xl font-semibold text-slate-900">Un compte permet dâ€™aller plus loin.</div>
+              <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">CrÃ©er un compte pour sauvegarder, contacter, comparer ou publier si vous Ãªtes un Ã©tablissement.</p>
+              <button onClick={onOpenAuth} className="mt-6 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">CrÃ©er ou connecter un compte</button>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {[
                 ["Candidat", "Sauvegarder et contacter"],
-                ["Établissement", "Publier ses offres"],
+                ["Ã‰tablissement", "Publier ses offres"],
                 ["Recherche", "Explorer les formations"],
-                ["Messagerie", "Suivre ses échanges"],
+                ["Messagerie", "Suivre ses Ã©changes"],
               ].map(([title, text]) => (
                 <div key={title} className="rounded-[24px] border border-[#f1dde3] bg-[#fff9fa] p-5">
                   <div className="text-base font-semibold text-slate-900">{title}</div>
@@ -2152,7 +2191,7 @@ function BottomNav({ activeTab, setActiveTab, onPublishRequest, currentUser, onO
             className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 ${activeTab === key ? "bg-[#fff4f6] text-slate-900" : "text-slate-500 hover:bg-[#fff8fa] hover:text-slate-900"}`}
           >
             <Icon className="h-4 w-4" />
-            <span className="text-[11px]">{label}</span>
+            <span className="text-[11px]">{fixText(label)}</span>
           </button>
         ))}
       </div>
@@ -2174,7 +2213,7 @@ export default function AfrikArtsMarketplacePrototype() {
   const [adminToken, setAdminToken] = useState(localStorage.getItem("studysia_admin_token") || "");
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [soundVolume, setSoundVolume] = useState(0.35);
-  const [programsData, setProgramsData] = useState(programs.filter((p) => AFRAM_ONLY(p.institution)));
+  const [programsData, setProgramsData] = useState(programs.map(fixProgram));
   const audioRef = React.useRef(null);
   const selectedTrack = useMemo(() => {
     if (!AUDIO_TRACKS.length) return null;
@@ -2184,12 +2223,14 @@ export default function AfrikArtsMarketplacePrototype() {
 
   const filteredPrograms = useMemo(() => {
     if (selectedFilter === "Tous") return programsData;
-    return programsData.filter((item) => item.field === selectedFilter);
+    return programsData.filter(
+      (item) => normalizeText(item.field) === normalizeText(selectedFilter)
+    );
   }, [selectedFilter, programsData]);
 
   const handleLogin = (roleMode) => {
     setCurrentUser({
-      name: roleMode === "institution" ? "Université Démo Afrique" : "Usager Démo",
+      name: roleMode === "institution" ? "UniversitÃ© DÃ©mo Afrique" : "Usager DÃ©mo",
       handle: roleMode === "institution" ? "@univdemo" : "@candidatdemo",
       city: "Libreville, Gabon",
       role: roleMode,
@@ -2337,8 +2378,7 @@ export default function AfrikArtsMarketplacePrototype() {
             gallery: [],
           };
         });
-        const aframOnly = mapped.filter((p) => AFRAM_ONLY(p.institution || ""));
-        if (aframOnly.length) setProgramsData(aframOnly);
+        setProgramsData(mapped.map(fixProgram));
       } catch {
         // fallback to local data
       }
@@ -2435,3 +2475,4 @@ export default function AfrikArtsMarketplacePrototype() {
     </div>
   );
 }
+

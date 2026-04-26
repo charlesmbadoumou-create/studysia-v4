@@ -60,10 +60,11 @@ async function seedAfram() {
     contact: "(+241) 066 70 11 84 / 066 70 11 85 / 074 00 00 83",
     whatsapp: "+24174000043",
     logo_url: "/logo-afram.png",
+    active_etablissement: 1,
   };
 
   const instInsert = await run(
-    "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, created_at) VALUES (?,?,?,?,?,?,?,?,?)",
+    "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, active_etablissement, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
     [
       institution.name,
       institution.handle,
@@ -73,6 +74,7 @@ async function seedAfram() {
       institution.contact,
       institution.whatsapp,
       institution.logo_url,
+      institution.active_etablissement,
       now(),
     ]
   );
@@ -106,7 +108,7 @@ async function seedAfram() {
   for (const [field, degree, title, domain] of programs) {
     const isMaster = degree === "Master";
     await run(
-      "INSERT INTO programs (institution_id, field, degree, duration, intake, title, summary, tuition, mode, admission, highlights, outcomes, image_url, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+      "INSERT INTO programs (institution_id, field, degree, duration, intake, title, summary, tuition, mode, admission, highlights, outcomes, image_url, active_formation, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
       [
         institutionId,
         field,
@@ -121,6 +123,7 @@ async function seedAfram() {
         JSON.stringify(["Approche professionnalisante", "Corps enseignant experimente", "Diplome LMD"]),
         JSON.stringify(["Insertion professionnelle", "Competences operationnelles", "Evolution de carriere"]),
         pickImage(field),
+        1,
         now(),
       ]
     );
@@ -137,4 +140,3 @@ seedAfram()
     console.error(err);
     process.exit(1);
   });
-

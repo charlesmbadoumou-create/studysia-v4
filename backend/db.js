@@ -36,6 +36,10 @@ export function initDb() {
         created_at TEXT NOT NULL
       )`
     );
+    db.run(
+      "ALTER TABLE institutions ADD COLUMN active_etablissement INTEGER NOT NULL DEFAULT 1",
+      () => {}
+    );
 
     db.run(
       `CREATE TABLE IF NOT EXISTS programs (
@@ -56,6 +60,10 @@ export function initDb() {
         created_at TEXT NOT NULL,
         FOREIGN KEY (institution_id) REFERENCES institutions(id)
       )`
+    );
+    db.run(
+      "ALTER TABLE programs ADD COLUMN active_formation INTEGER NOT NULL DEFAULT 1",
+      () => {}
     );
 
     db.run(
