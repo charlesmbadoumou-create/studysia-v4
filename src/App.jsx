@@ -1538,6 +1538,14 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
   const [programsList, setProgramsList] = useState([]);
   const [editingInstitutionId, setEditingInstitutionId] = useState(null);
   const [editingProgramId, setEditingProgramId] = useState(null);
+  const [accountForm, setAccountForm] = useState({
+    name: "AFRAM",
+    email: "contact@afram.ga",
+    password: "Afram123!",
+    role: "institution",
+    institution_id: "",
+  });
+  const [createdAccounts, setCreatedAccounts] = useState([]);
   const [form, setForm] = useState({
     name: "",
     handle: "",
@@ -1566,6 +1574,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
   const [uploading, setUploading] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [galleryFiles, setGalleryFiles] = useState([]);
+  const [adminSection, setAdminSection] = useState("dashboard");
 
   const loadInstitutions = async () => {
     if (!apiUrl) return;
@@ -1675,6 +1684,50 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       await loadPrograms();
     } else {
       setStatus(data.error || "Erreur");
+    }
+  };
+
+  const createAccount = async () => {
+    if (!apiUrl) return;
+    const name = (accountForm.name || "").trim();
+    const emailValue = (accountForm.email || "").trim().toLowerCase();
+    const passwordValue = (accountForm.password || "").trim();
+    const roleValue = (accountForm.role || "institution").trim();
+    const institutionIdValue =
+      roleValue === "institution" && accountForm.institution_id
+        ? Number(accountForm.institution_id)
+        : null;
+    if (!name || !emailValue || !passwordValue) {
+      setStatus("Nom, email et mot de passe requis.");
+      return;
+    }
+    if (roleValue === "institution" && !institutionIdValue) {
+      setStatus("Selectionnez un etablissement pour ce compte.");
+      return;
+    }
+    setStatus("Creation compte...");
+    const res = await fetch(`${apiUrl}/api/admin/users`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        name,
+        email: emailValue,
+        password: passwordValue,
+        role: roleValue,
+        institution_id: institutionIdValue,
+      }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setCreatedAccounts((prev) => [data, ...prev].slice(0, 5));
+      const inst = institutions.find((i) => i.id === data.institution_id);
+      const instLabel = inst ? ` -> ${inst.name}` : "";
+      setStatus(`Compte cree: ${data.email} (${data.role})${instLabel}`);
+    } else {
+      setStatus(data.error || "Erreur creation compte");
     }
   };
 
@@ -1967,6 +2020,99 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
           <div className="mt-4 text-sm text-slate-600">Institutions existantes: {institutions.length}</div>
         </div>
 
+        <div className="rounded-[24px] border border-[#f1dde3] bg-white p-3 shadow-sm">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+            <button onClick={() => setAdminSection("dashboard")} className={`rounded-xl px-3 py-2 text-sm font-medium ${adminSection === "dashboard" ? "bg-slate-900 text-white" : "bg-[#fff4f6] text-slate-700"}`}>Vue</button>
+            <button onClick={() => setAdminSection("accounts")} className={`rounded-xl px-3 py-2 text-sm font-medium ${adminSection === "accounts" ? "bg-slate-900 text-white" : "bg-[#fff4f6] text-slate-700"}`}>Comptes</button>
+            <button onClick={() => setAdminSection("institutions")} className={`rounded-xl px-3 py-2 text-sm font-medium ${adminSection === "institutions" ? "bg-slate-900 text-white" : "bg-[#fff4f6] text-slate-700"}`}>Etablissements</button>
+            <button onClick={() => setAdminSection("programs")} className={`rounded-xl px-3 py-2 text-sm font-medium ${adminSection === "programs" ? "bg-slate-900 text-white" : "bg-[#fff4f6] text-slate-700"}`}>Formations</button>
+          </div>
+        </div>
+
+        {adminSection === "dashboard" && (
+          <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
+            <div className="text-lg font-semibold text-slate-900">Vue rapide</div>
+            <div className="mt-4 grid gap-3 md:grid-cols-3">
+              <div className="rounded-2xl bg-[#fff9fa] p-4 text-sm text-slate-700">Comptes recents: {createdAccounts.length}</div>
+              <div className="rounded-2xl bg-[#fff9fa] p-4 text-sm text-slate-700">Etablissements: {institutions.length}</div>
+              <div className="rounded-2xl bg-[#fff9fa] p-4 text-sm text-slate-700">Formations: {programsList.length}</div>
+            </div>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button onClick={() => setAdminSection("accounts")} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Creer un compte</button>
+              <button onClick={() => setAdminSection("institutions")} className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">Ajouter un etablissement</button>
+              <button onClick={() => setAdminSection("programs")} className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">Ajouter une formation</button>
+            </div>
+          </div>
+        )}
+
+        {adminSection === "accounts" && (
+        <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
+          <div className="text-lg font-semibold text-slate-900">Créer un compte établissement</div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            <input
+              className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm"
+              placeholder="Nom"
+              value={accountForm.name}
+              onChange={(e) => setAccountForm({ ...accountForm, name: e.target.value })}
+            />
+            <input
+              className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm"
+              placeholder="Email"
+              value={accountForm.email}
+              onChange={(e) => setAccountForm({ ...accountForm, email: e.target.value })}
+            />
+            <input
+              className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm"
+              placeholder="Mot de passe"
+              value={accountForm.password}
+              onChange={(e) => setAccountForm({ ...accountForm, password: e.target.value })}
+            />
+            <select
+              className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm"
+              value={accountForm.role}
+              onChange={(e) => setAccountForm({ ...accountForm, role: e.target.value })}
+            >
+              <option value="institution">institution</option>
+              <option value="user">user</option>
+              <option value="admin">admin</option>
+            </select>
+            <select
+              className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm"
+              value={accountForm.institution_id}
+              onChange={(e) => setAccountForm({ ...accountForm, institution_id: e.target.value })}
+              disabled={accountForm.role !== "institution"}
+            >
+              <option value="">Etablissement lie</option>
+              {institutions.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button onClick={createAccount} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">
+            Créer compte
+          </button>
+          {createdAccounts.length > 0 && (
+            <div className="mt-4 space-y-2">
+              {createdAccounts.map((u) => (
+                <div key={`${u.id}-${u.email}`} className="rounded-2xl border border-[#f1dde3] bg-[#fff9fa] px-4 py-2 text-sm">
+                  {u.name} - {u.email} ({u.role})
+                  {u.institution_id
+                    ? ` -> ${
+                        institutions.find((i) => i.id === u.institution_id)?.name ||
+                        `Institution #${u.institution_id}`
+                      }`
+                    : ""}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        )}
+
+        {adminSection === "institutions" && (
         <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
           <div className="text-lg font-semibold text-slate-900">Créer un établissement</div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -1993,6 +2139,9 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
           </div>
         </div>
 
+        )}
+
+        {adminSection === "programs" && (
         <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
           <div className="text-lg font-semibold text-slate-900">Créer une formation</div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
@@ -2045,6 +2194,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
             ))}
           </div>
         </div>
+        )}
       </div>
     </div>
   );

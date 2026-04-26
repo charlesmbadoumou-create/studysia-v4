@@ -18,8 +18,13 @@ export function initDb() {
         email TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
         role TEXT NOT NULL DEFAULT 'user',
+        institution_id INTEGER,
         created_at TEXT NOT NULL
       )`
+    );
+    db.run(
+      "ALTER TABLE users ADD COLUMN institution_id INTEGER",
+      () => {}
     );
 
     db.run(

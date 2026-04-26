@@ -38,7 +38,11 @@ function now() {
 }
 
 function signToken(user) {
-  return jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
+  return jwt.sign(
+    { id: user.id, role: user.role, institution_id: user.institution_id || null },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
 }
 
 function authRequired(req, res, next) {
@@ -81,20 +85,55 @@ app.post("/api/upload", authRequired, adminOnly, upload.single("file"), (req, re
 });
 
 app.post("/api/auth/register", (req, res) => {
-  const { name, email, password, role } = req.body || {};
+  const { name, email, password, role, institution_id } = req.body || {};
   if (!name || !email || !password) {
     return res.status(400).json({ error: "Missing fields" });
   }
   const hash = bcrypt.hashSync(password, 10);
   const createdAt = now();
-  const userRole = role === "admin" ? "admin" : "user";
+  const normalizedRole = String(role || "").trim().toLowerCase();
+  // Public registration cannot create admins.
+  const userRole = normalizedRole === "institution" ? "institution" : "user";
 
+  const linkedInstitutionId =
+    userRole === "institution" && institution_id ? Number(institution_id) : null;
   const stmt = db.prepare(
-    "INSERT INTO users (name, email, password_hash, role, created_at) VALUES (?,?,?,?,?)"
+    "INSERT INTO users (name, email, password_hash, role, institution_id, created_at) VALUES (?,?,?,?,?,?)"
   );
-  stmt.run([name, email, hash, userRole, createdAt], function (err) {
+  stmt.run([name, email, hash, userRole, linkedInstitutionId, createdAt], function (err) {
     if (err) return res.status(400).json({ error: err.message });
-    res.json({ id: this.lastID, name, email, role: userRole });
+    res.json({ id: this.lastID, name, email, role: userRole, institution_id: linkedInstitutionId });
+  });
+});
+
+app.post("/api/admin/users", authRequired, adminOnly, (req, res) => {
+  const { name, email, password, role, institution_id } = req.body || {};
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+  const normalizedRole = String(role || "").trim().toLowerCase();
+  const allowedRoles = new Set(["user", "institution", "admin"]);
+  const userRole = allowedRoles.has(normalizedRole) ? normalizedRole : "institution";
+  const hash = bcrypt.hashSync(password, 10);
+  const createdAt = now();
+
+  const linkedInstitutionId =
+    userRole === "institution" && institution_id ? Number(institution_id) : null;
+  if (userRole === "institution" && !linkedInstitutionId) {
+    return res.status(400).json({ error: "institution_id is required for institution accounts" });
+  }
+  const stmt = db.prepare(
+    "INSERT INTO users (name, email, password_hash, role, institution_id, created_at) VALUES (?,?,?,?,?,?)"
+  );
+  stmt.run([name, email, hash, userRole, linkedInstitutionId, createdAt], function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({
+      id: this.lastID,
+      name,
+      email,
+      role: userRole,
+      institution_id: linkedInstitutionId,
+    });
   });
 });
 
@@ -102,12 +141,28 @@ app.post("/api/auth/login", (req, res) => {
   const { email, password } = req.body || {};
   if (!email || !password) return res.status(400).json({ error: "Missing fields" });
 
-  db.get("SELECT * FROM users WHERE email = ?", [email], (err, row) => {
+  db.get(
+    `SELECT u.*, i.name AS institution_name
+     FROM users u
+     LEFT JOIN institutions i ON i.id = u.institution_id
+     WHERE u.email = ?`,
+    [email],
+    (err, row) => {
     if (err || !row) return res.status(401).json({ error: "Invalid credentials" });
     const ok = bcrypt.compareSync(password, row.password_hash);
     if (!ok) return res.status(401).json({ error: "Invalid credentials" });
     const token = signToken(row);
-    res.json({ token, user: { id: row.id, name: row.name, email: row.email, role: row.role } });
+    res.json({
+      token,
+      user: {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        role: row.role,
+        institution_id: row.institution_id || null,
+        institution_name: row.institution_name || null,
+      },
+    });
   });
 });
 
