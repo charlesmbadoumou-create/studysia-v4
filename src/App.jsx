@@ -1706,28 +1706,36 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       return;
     }
     setStatus("Creation compte...");
-    const res = await fetch(`${apiUrl}/api/admin/users`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        name,
-        email: emailValue,
-        password: passwordValue,
-        role: roleValue,
-        institution_id: institutionIdValue,
-      }),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      setCreatedAccounts((prev) => [data, ...prev].slice(0, 5));
-      const inst = institutions.find((i) => i.id === data.institution_id);
-      const instLabel = inst ? ` -> ${inst.name}` : "";
-      setStatus(`Compte cree: ${data.email} (${data.role})${instLabel}`);
-    } else {
-      setStatus(data.error || "Erreur creation compte");
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/users`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name,
+          email: emailValue,
+          password: passwordValue,
+          role: roleValue,
+          institution_id: institutionIdValue,
+        }),
+      });
+      const contentType = res.headers.get("content-type") || "";
+      const data = contentType.includes("application/json")
+        ? await res.json()
+        : { error: await res.text() };
+
+      if (res.ok) {
+        setCreatedAccounts((prev) => [data, ...prev].slice(0, 5));
+        const inst = institutions.find((i) => i.id === data.institution_id);
+        const instLabel = inst ? ` -> ${inst.name}` : "";
+        setStatus(`Compte cree: ${data.email} (${data.role})${instLabel}`);
+      } else {
+        setStatus(data.error || `Erreur creation compte (HTTP ${res.status})`);
+      }
+    } catch (error) {
+      setStatus(`Erreur reseau: ${error?.message || "inconnue"}`);
     }
   };
 
@@ -2093,6 +2101,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
           <button onClick={createAccount} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">
             Créer compte
           </button>
+          {status && <div className="mt-3 text-sm text-slate-600">{status}</div>}
           {createdAccounts.length > 0 && (
             <div className="mt-4 space-y-2">
               {createdAccounts.map((u) => (
