@@ -31,7 +31,7 @@ app.use(cors({ origin: CORS_ORIGIN }));
 app.use(express.json());
 app.use("/uploads", express.static(uploadsDir));
 
-initDb();
+await initDb();
 
 function now() {
   return new Date().toISOString();
@@ -106,6 +106,20 @@ app.post("/api/auth/register", (req, res) => {
   });
 });
 
+app.get("/api/admin/users", authRequired, adminOnly, (req, res) => {
+  db.all(
+    `SELECT u.id, u.name, u.email, u.role, u.institution_id, u.created_at, i.name AS institution_name
+     FROM users u
+     LEFT JOIN institutions i ON i.id = u.institution_id
+     ORDER BY u.id DESC`,
+    [],
+    (err, rows) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(rows);
+    }
+  );
+});
+
 app.post("/api/admin/users", authRequired, adminOnly, (req, res) => {
   const { name, email, password, role, institution_id } = req.body || {};
   if (!name || !email || !password) {
@@ -134,6 +148,46 @@ app.post("/api/admin/users", authRequired, adminOnly, (req, res) => {
       role: userRole,
       institution_id: linkedInstitutionId,
     });
+  });
+});
+
+app.put("/api/admin/users/:id", authRequired, adminOnly, (req, res) => {
+  const id = Number(req.params.id);
+  const { name, email, role, institution_id, password } = req.body || {};
+  if (!name || !email || !role) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+  const normalizedRole = String(role || "").trim().toLowerCase();
+  const allowedRoles = new Set(["user", "institution", "admin"]);
+  if (!allowedRoles.has(normalizedRole)) {
+    return res.status(400).json({ error: "Invalid role" });
+  }
+  const linkedInstitutionId =
+    normalizedRole === "institution" && institution_id ? Number(institution_id) : null;
+  if (normalizedRole === "institution" && !linkedInstitutionId) {
+    return res.status(400).json({ error: "institution_id is required for institution accounts" });
+  }
+  const updates = ["name = ?", "email = ?", "role = ?", "institution_id = ?"];
+  const params = [name, email, normalizedRole, linkedInstitutionId];
+  if (password && String(password).trim()) {
+    updates.push("password_hash = ?");
+    params.push(bcrypt.hashSync(String(password).trim(), 10));
+  }
+  params.push(id);
+  db.run(`UPDATE users SET ${updates.join(", ")} WHERE id = ?`, params, function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({ ok: this.changes > 0 });
+  });
+});
+
+app.delete("/api/admin/users/:id", authRequired, adminOnly, (req, res) => {
+  const id = Number(req.params.id);
+  if (req.user?.id === id) {
+    return res.status(400).json({ error: "Impossible de supprimer votre propre compte admin" });
+  }
+  db.run("DELETE FROM users WHERE id = ?", [id], function (err) {
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({ ok: this.changes > 0 });
   });
 });
 
@@ -197,15 +251,42 @@ app.get("/api/institutions/:id", (req, res) => {
 });
 
 app.post("/api/institutions", authRequired, adminOnly, (req, res) => {
-  const { name, handle, city, country, address, contact, whatsapp, logo_url, active_etablissement } = req.body || {};
+  const {
+    name,
+    handle,
+    city,
+    country,
+    address,
+    contact,
+    whatsapp,
+    logo_url,
+    share_whatsapp,
+    share_facebook,
+    share_tiktok,
+    active_etablissement,
+  } = req.body || {};
   if (!name || !city || !country) {
     return res.status(400).json({ error: "Name, city and country are required" });
   }
   const stmt = db.prepare(
-    "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, active_etablissement, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)"
+    "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, share_whatsapp, share_facebook, share_tiktok, active_etablissement, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
   );
   stmt.run(
-    [name, handle, city, country, address, contact, whatsapp, logo_url, toActiveFlag(active_etablissement, 1), now()],
+    [
+      name,
+      handle,
+      city,
+      country,
+      address,
+      contact,
+      whatsapp,
+      logo_url,
+      share_whatsapp || "",
+      share_facebook || "",
+      share_tiktok || "",
+      toActiveFlag(active_etablissement, 1),
+      now(),
+    ],
     function (err) {
     if (err) return res.status(400).json({ error: err.message });
     res.json({ id: this.lastID });
@@ -213,15 +294,58 @@ app.post("/api/institutions", authRequired, adminOnly, (req, res) => {
   );
 });
 
-app.put("/api/institutions/:id", authRequired, adminOnly, (req, res) => {
+app.put("/api/institutions/:id", authRequired, (req, res) => {
   const id = Number(req.params.id);
-  const { name, handle, city, country, address, contact, whatsapp, logo_url, active_etablissement } = req.body || {};
-  if (!name || !city || !country) {
+  const {
+    name,
+    handle,
+    city,
+    country,
+    address,
+    contact,
+    whatsapp,
+    logo_url,
+    share_whatsapp,
+    share_facebook,
+    share_tiktok,
+    active_etablissement,
+  } = req.body || {};
+  const isAdmin = req.user?.role === "admin";
+  const isOwnerInstitution = req.user?.role === "institution" && Number(req.user?.institution_id) === id;
+  if (!isAdmin && !isOwnerInstitution) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  if (isAdmin && (!name || !city || !country)) {
     return res.status(400).json({ error: "Name, city and country are required" });
   }
+  if (isOwnerInstitution && !isAdmin) {
+    db.run(
+      "UPDATE institutions SET contact=?, whatsapp=?, share_whatsapp=?, share_facebook=?, share_tiktok=? WHERE id=?",
+      [contact || "", whatsapp || "", share_whatsapp || "", share_facebook || "", share_tiktok || "", id],
+      function (err) {
+        if (err) return res.status(400).json({ error: err.message });
+        res.json({ ok: this.changes > 0 });
+      }
+    );
+    return;
+  }
   db.run(
-    "UPDATE institutions SET name=?, handle=?, city=?, country=?, address=?, contact=?, whatsapp=?, logo_url=?, active_etablissement=? WHERE id=?",
-    [name, handle, city, country, address, contact, whatsapp, logo_url, toActiveFlag(active_etablissement, 1), id],
+    "UPDATE institutions SET name=?, handle=?, city=?, country=?, address=?, contact=?, whatsapp=?, logo_url=?, share_whatsapp=?, share_facebook=?, share_tiktok=?, active_etablissement=? WHERE id=?",
+    [
+      name,
+      handle,
+      city,
+      country,
+      address,
+      contact,
+      whatsapp,
+      logo_url,
+      share_whatsapp || "",
+      share_facebook || "",
+      share_tiktok || "",
+      toActiveFlag(active_etablissement, 1),
+      id,
+    ],
     function (err) {
       if (err) return res.status(400).json({ error: err.message });
       res.json({ ok: this.changes > 0 });

@@ -1,4 +1,4 @@
-
+﻿
 import React, { useMemo, useState } from "react";
 import {
   Building2,
@@ -1099,20 +1099,48 @@ function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSel
 }
 
 function ActionRail({ item }) {
+  const [shareOpen, setShareOpen] = useState(false);
+  const shareUrl = typeof window !== "undefined" ? window.location.href : "https://studysia.com";
+  const shareText = encodeURIComponent(`${item.title} - ${item.institution} | Studysia`);
+  const whatsappUrl = item.share_whatsapp || `https://wa.me/?text=${shareText}%20${encodeURIComponent(shareUrl)}`;
+  const facebookUrl = item.share_facebook || `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`;
+  const tiktokUrl = item.share_tiktok || "https://www.tiktok.com/";
+
   return (
     <div className="absolute right-4 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center gap-4 lg:right-6">
       {[
-        [Bookmark, item.saves],
-        [MessageCircle, "Contact"],
-        [Share2, "Partager"],
-      ].map(([Icon, value], index) => (
-        <button key={`${item.id}-${index}`} className="flex flex-col items-center gap-2 text-slate-700 transition hover:scale-105">
+        [Bookmark, item.saves, null],
+        [MessageCircle, "Contact", null],
+        [Share2, "Partager", () => setShareOpen((v) => !v)],
+      ].map(([Icon, value, onClick], index) => (
+        <button
+          key={`${item.id}-${index}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (onClick) onClick();
+          }}
+          className="flex flex-col items-center gap-2 text-slate-700 transition hover:scale-105"
+        >
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 shadow-lg shadow-pink-50">
             <Icon className="h-5 w-5" />
           </div>
           <span className="text-xs font-medium text-white drop-shadow-sm lg:text-slate-700">{value}</span>
         </button>
       ))}
+
+      {shareOpen && (
+        <div className="absolute right-14 top-[130px] w-44 rounded-2xl border border-[#f1dde3] bg-white p-2 shadow-xl">
+          <a onClick={(e) => e.stopPropagation()} href={whatsappUrl} target="_blank" rel="noreferrer" className="block rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-[#fff6f7]">
+            WhatsApp
+          </a>
+          <a onClick={(e) => e.stopPropagation()} href={facebookUrl} target="_blank" rel="noreferrer" className="block rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-[#fff6f7]">
+            Facebook
+          </a>
+          <a onClick={(e) => e.stopPropagation()} href={tiktokUrl} target="_blank" rel="noreferrer" className="block rounded-xl px-3 py-2 text-sm text-slate-700 hover:bg-[#fff6f7]">
+            TikTok
+          </a>
+        </div>
+      )}
     </div>
   );
 }
@@ -1137,7 +1165,14 @@ function ProgramSlide({ item, onViewOffer }) {
             <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs text-slate-700">{item.mode}</span>
             <span className="rounded-full bg-[#fff3f5] px-3 py-1 text-xs text-slate-700">{item.intake}</span>
           </div>
-          <h1 className="mt-4 text-xl font-semibold leading-tight text-slate-900 sm:text-2xl lg:text-4xl">{item.title}</h1>
+          <div className="mt-4 flex items-start gap-3">
+            <img
+              src={item.logo || GENERIC_LOGO}
+              alt={item.institution}
+              className="h-11 w-11 rounded-xl bg-white p-1 object-contain shadow-sm"
+            />
+            <h1 className="text-xl font-semibold leading-tight text-slate-900 sm:text-2xl lg:text-4xl">{item.title}</h1>
+          </div>
           <p className="mt-3 text-sm leading-6 text-slate-600 sm:leading-7">{item.summary}</p>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -1531,8 +1566,8 @@ function InstitutionDetailScreen({ item, onBack, onViewOffer, programsData }) {
 }
 
 function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
-  const [email, setEmail] = useState("admin@studysia.com");
-  const [password, setPassword] = useState("Admin123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [status, setStatus] = useState("");
   const [institutions, setInstitutions] = useState([]);
   const [programsList, setProgramsList] = useState([]);
@@ -1546,6 +1581,9 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     institution_id: "",
   });
   const [createdAccounts, setCreatedAccounts] = useState([]);
+  const [accountsList, setAccountsList] = useState([]);
+  const [accountsError, setAccountsError] = useState("");
+  const [editingAccountId, setEditingAccountId] = useState(null);
   const [form, setForm] = useState({
     name: "",
     handle: "",
@@ -1555,6 +1593,9 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     contact: "",
     whatsapp: "",
     logo_url: "",
+    share_whatsapp: "",
+    share_facebook: "",
+    share_tiktok: "",
   });
   const [programForm, setProgramForm] = useState({
     institution_id: "",
@@ -1590,10 +1631,32 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     setProgramsList(data);
   };
 
+  const loadAccounts = async () => {
+    if (!apiUrl || !token) return;
+    setAccountsError("");
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/users`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const contentType = res.headers.get("content-type") || "";
+      const data = contentType.includes("application/json")
+        ? await res.json()
+        : { error: await res.text() };
+      if (res.ok) {
+        setAccountsList(Array.isArray(data) ? data : []);
+      } else {
+        setAccountsError(data.error || `Erreur chargement comptes (HTTP ${res.status})`);
+      }
+    } catch (error) {
+      setAccountsError(`Erreur reseau comptes: ${error?.message || "inconnue"}`);
+    }
+  };
+
   React.useEffect(() => {
     if (token) {
       loadInstitutions();
       loadPrograms();
+      loadAccounts();
     }
   }, [token]);
 
@@ -1636,7 +1699,18 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     if (res.ok) {
       setStatus(editingInstitutionId ? "Établissement mis à jour" : "Établissement créé");
       setEditingInstitutionId(null);
-      setForm({ ...form, name: "", handle: "", address: "", contact: "", whatsapp: "", logo_url: "" });
+      setForm({
+        ...form,
+        name: "",
+        handle: "",
+        address: "",
+        contact: "",
+        whatsapp: "",
+        logo_url: "",
+        share_whatsapp: "",
+        share_facebook: "",
+        share_tiktok: "",
+      });
       await loadInstitutions();
       if (!programForm.institution_id && data.id) setProgramForm({ ...programForm, institution_id: data.id });
     } else {
@@ -1731,8 +1805,88 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         const inst = institutions.find((i) => i.id === data.institution_id);
         const instLabel = inst ? ` -> ${inst.name}` : "";
         setStatus(`Compte cree: ${data.email} (${data.role})${instLabel}`);
+        await loadAccounts();
       } else {
         setStatus(data.error || `Erreur creation compte (HTTP ${res.status})`);
+      }
+    } catch (error) {
+      setStatus(`Erreur reseau: ${error?.message || "inconnue"}`);
+    }
+  };
+
+  const editAccount = (account) => {
+    setEditingAccountId(account.id);
+    setAccountForm({
+      name: account.name || "",
+      email: account.email || "",
+      password: "",
+      role: account.role || "institution",
+      institution_id: account.institution_id ? String(account.institution_id) : "",
+    });
+    setStatus(`Edition du compte #${account.id}`);
+  };
+
+  const updateAccount = async () => {
+    if (!apiUrl || !editingAccountId) return;
+    const payload = {
+      name: (accountForm.name || "").trim(),
+      email: (accountForm.email || "").trim().toLowerCase(),
+      role: (accountForm.role || "institution").trim(),
+      institution_id:
+        accountForm.role === "institution" && accountForm.institution_id
+          ? Number(accountForm.institution_id)
+          : null,
+    };
+    if (!payload.name || !payload.email || !payload.role) {
+      setStatus("Nom, email et role requis.");
+      return;
+    }
+    if (payload.role === "institution" && !payload.institution_id) {
+      setStatus("Selectionnez un etablissement pour ce compte.");
+      return;
+    }
+    if ((accountForm.password || "").trim()) {
+      payload.password = accountForm.password.trim();
+    }
+    setStatus("Mise a jour compte...");
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/users/${editingAccountId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setStatus("Compte modifie");
+        setEditingAccountId(null);
+        setAccountForm((prev) => ({ ...prev, password: "" }));
+        await loadAccounts();
+      } else {
+        setStatus(data.error || `Erreur mise a jour (HTTP ${res.status})`);
+      }
+    } catch (error) {
+      setStatus(`Erreur reseau: ${error?.message || "inconnue"}`);
+    }
+  };
+
+  const deleteAccount = async (accountId) => {
+    if (!confirm("Supprimer ce compte ?")) return;
+    setStatus("Suppression compte...");
+    try {
+      const res = await fetch(`${apiUrl}/api/admin/users/${accountId}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setStatus("Compte supprime");
+        if (editingAccountId === accountId) setEditingAccountId(null);
+        await loadAccounts();
+      } else {
+        setStatus(data.error || `Erreur suppression (HTTP ${res.status})`);
       }
     } catch (error) {
       setStatus(`Erreur reseau: ${error?.message || "inconnue"}`);
@@ -2098,9 +2252,22 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
               ))}
             </select>
           </div>
-          <button onClick={createAccount} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">
-            Créer compte
-          </button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button onClick={editingAccountId ? updateAccount : createAccount} className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">
+              {editingAccountId ? "Enregistrer" : "Creer compte"}
+            </button>
+            {editingAccountId && (
+              <button
+                onClick={() => {
+                  setEditingAccountId(null);
+                  setAccountForm((prev) => ({ ...prev, password: "" }));
+                }}
+                className="rounded-2xl border border-[#f0dde2] px-5 py-3 text-sm font-semibold text-slate-700"
+              >
+                Annuler
+              </button>
+            )}
+          </div>
           {status && <div className="mt-3 text-sm text-slate-600">{status}</div>}
           {createdAccounts.length > 0 && (
             <div className="mt-4 space-y-2">
@@ -2117,6 +2284,37 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
               ))}
             </div>
           )}
+
+          <div className="mt-6">
+            <div className="text-base font-semibold text-slate-900">Comptes existants</div>
+            {accountsError && (
+              <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+                {accountsError}
+              </div>
+            )}
+            <div className="mt-2">
+              <button onClick={loadAccounts} className="rounded-xl border border-[#f0dde2] px-3 py-1.5 text-xs text-slate-700">
+                Actualiser
+              </button>
+            </div>
+            <div className="mt-3 space-y-2">
+              {accountsList.map((u) => (
+                <div key={`acc-${u.id}`} className="flex items-center justify-between gap-3 rounded-2xl border border-[#f1dde3] bg-white px-4 py-2 text-sm">
+                  <div>
+                    {u.name} - {u.email} ({u.role})
+                    {u.institution_name ? ` -> ${u.institution_name}` : ""}
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => editAccount(u)} className="text-slate-600 hover:text-slate-900">Modifier</button>
+                    <button onClick={() => deleteAccount(u.id)} className="text-slate-600 hover:text-slate-900">Supprimer</button>
+                  </div>
+                </div>
+              ))}
+              {accountsList.length === 0 && (
+                <div className="text-sm text-slate-500">Aucun compte trouve.</div>
+              )}
+            </div>
+          </div>
         </div>
 
         )}
@@ -2634,4 +2832,5 @@ export default function AfrikArtsMarketplacePrototype() {
     </div>
   );
 }
+
 
