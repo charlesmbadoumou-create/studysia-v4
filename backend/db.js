@@ -1,10 +1,7 @@
+import dotenv from "dotenv";
 import { Pool } from "pg";
 
-const DATABASE_URL = process.env.DATABASE_URL;
-
-if (!DATABASE_URL) {
-  throw new Error("DATABASE_URL is required for PostgreSQL");
-}
+dotenv.config({ path: new URL("./.env", import.meta.url).pathname });
 
 const ssl =
   process.env.PGSSL === "false"
@@ -13,10 +10,39 @@ const ssl =
       ? { rejectUnauthorized: false }
       : false;
 
-const pool = new Pool({
-  connectionString: DATABASE_URL,
-  ssl,
-});
+const DATABASE_URL = process.env.DATABASE_URL;
+const hasDiscretePgConfig =
+  process.env.PGHOST &&
+  process.env.PGPORT &&
+  process.env.PGUSER &&
+  process.env.PGPASSWORD &&
+  process.env.PGDATABASE;
+
+const poolConfig = { ssl };
+
+if (DATABASE_URL) {
+  try {
+    new URL(DATABASE_URL);
+    poolConfig.connectionString = DATABASE_URL;
+  } catch {
+    if (!hasDiscretePgConfig) {
+      throw new Error("Invalid DATABASE_URL and missing PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE");
+    }
+  }
+}
+
+if (!poolConfig.connectionString) {
+  if (!hasDiscretePgConfig) {
+    throw new Error("DATABASE_URL or full PGHOST/PGPORT/PGUSER/PGPASSWORD/PGDATABASE is required");
+  }
+  poolConfig.host = process.env.PGHOST;
+  poolConfig.port = Number(process.env.PGPORT);
+  poolConfig.user = process.env.PGUSER;
+  poolConfig.password = process.env.PGPASSWORD;
+  poolConfig.database = process.env.PGDATABASE;
+}
+
+const pool = new Pool(poolConfig);
 
 function toPgSql(sql) {
   let text = String(sql).trim();
