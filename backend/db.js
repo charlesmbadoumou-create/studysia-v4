@@ -1,7 +1,7 @@
 import dotenv from "dotenv";
 import { Pool } from "pg";
 
-dotenv.config({ path: new URL("./.env", import.meta.url).pathname });
+dotenv.config({ path: new URL("./.env", import.meta.url).pathname, override: true });
 
 const ssl =
   process.env.PGSSL === "false"
