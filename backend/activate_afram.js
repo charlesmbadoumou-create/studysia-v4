@@ -10,7 +10,7 @@ function run(sql, params = []) {
 }
 
 async function activateAframOnly() {
-  initDb();
+  await initDb();
   await run("UPDATE institutions SET active_etablissement = 0");
   await run("UPDATE programs SET active_formation = 0");
 
@@ -38,4 +38,3 @@ activateAframOnly()
     console.error(err);
     process.exit(1);
   });
-

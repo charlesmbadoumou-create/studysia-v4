@@ -23,7 +23,7 @@ function run(sql, params = []) {
 }
 
 async function seed() {
-  initDb();
+  await initDb();
 
   const adminEmail = "admin@studysia.com";
   const adminPassword = "Admin123!";

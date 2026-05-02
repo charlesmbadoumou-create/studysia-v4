@@ -80,7 +80,7 @@ function extractProgramsArray(source) {
 }
 
 async function seedFromApp() {
-  initDb();
+  await initDb();
 
   const source = fs.readFileSync(appPath, "utf8");
   const arrayText = extractProgramsArray(source);

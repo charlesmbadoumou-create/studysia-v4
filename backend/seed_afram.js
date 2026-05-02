@@ -43,7 +43,7 @@ function pickImage(field) {
 }
 
 async function seedAfram() {
-  initDb();
+  await initDb();
 
   // Keep users/admins, but reset institutions + programs as requested.
   await run("DELETE FROM gallery_images");
