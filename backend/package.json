@@ -9,7 +9,8 @@
     "seed": "node seed.js",
     "seed:afram": "node seed_afram.js",
     "seed:aum": "node seed_aum.js",
-    "activate:afram": "node activate_afram.js"
+    "activate:afram": "node activate_afram.js",
+    "activate:aum": "node activate_aum.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
