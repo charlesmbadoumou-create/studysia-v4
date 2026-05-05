@@ -1022,7 +1022,7 @@ function PublishDrawer({ open, onClose, currentUser }) {
   );
 }
 
-function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSelectedFilter, filterOpen, setFilterOpen, soundEnabled, soundVolume, onVolumeChange, onToggleSound, onOpenAuth, onPublishRequest, currentUser }) {
+function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSelectedFilter, filterOpen, setFilterOpen, soundEnabled, soundVolume, onVolumeChange, onToggleSound, onOpenAuth, onPublishRequest, onGoHome, currentUser }) {
   const selectedLabel = fixText(
     filters.find((f) => fixText(f.id) === selectedFilter)?.label || "Toutes les filières"
   );
@@ -1030,11 +1030,11 @@ function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSel
   return (
     <div className="fixed inset-x-0 top-0 z-40 border-b border-[#f3dce2] bg-white/90 backdrop-blur-xl">
       <div className="relative mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 gap-y-2 px-4 py-3 lg:px-6">
-        <div className="flex items-center">
+        <button type="button" onClick={onGoHome} className="flex items-center">
           <div className="flex h-16 w-[220px] items-center justify-center overflow-hidden sm:h-20 sm:w-[300px]">
             <img src="/logo-studysia.jpg" alt="Studysia" className="h-full w-full object-cover" />
           </div>
-        </div>
+        </button>
 
         {activeTab === "search" ? (
           <div className="min-w-0 flex-1 lg:justify-center">
@@ -1163,7 +1163,6 @@ function ProgramSlide({ item, onViewOffer }) {
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-[#fff3f5] px-3 py-1 text-xs text-slate-700">{item.degree}</span>
             <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs text-slate-700">{item.mode}</span>
-            <span className="rounded-full bg-[#fff3f5] px-3 py-1 text-xs text-slate-700">{item.intake}</span>
           </div>
           <div className="mt-4 flex items-start gap-3">
             <img
@@ -1394,7 +1393,6 @@ function OfferDetailScreen({ item, onBack, onOpenInstitution, programsData }) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[#fff3f5] px-3 py-1 text-xs text-slate-700">{item.degree}</span>
               <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs text-slate-700">{item.mode}</span>
-              <span className="rounded-full bg-[#fff3f5] px-3 py-1 text-xs text-slate-700">{item.intake}</span>
             </div>
 
             <div className="mt-4 text-sm leading-7 text-slate-600">{item.summary}</div>
@@ -2828,6 +2826,10 @@ export default function AfrikArtsMarketplacePrototype() {
         onToggleSound={handleToggleSound}
         onOpenAuth={() => setAuthOpen(true)}
         onPublishRequest={handlePublishRequest}
+        onGoHome={() => {
+          setActiveTab("feed");
+          setFilterOpen(false);
+        }}
         currentUser={currentUser}
       />
 
