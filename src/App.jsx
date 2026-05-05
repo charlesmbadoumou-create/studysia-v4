@@ -1574,9 +1574,9 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
   const [editingInstitutionId, setEditingInstitutionId] = useState(null);
   const [editingProgramId, setEditingProgramId] = useState(null);
   const [accountForm, setAccountForm] = useState({
-    name: "AFRAM",
-    email: "contact@afram.ga",
-    password: "Afram123!",
+    name: "",
+    email: "",
+    password: "",
     role: "institution",
     institution_id: "",
   });
@@ -1615,6 +1615,8 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
   const [uploading, setUploading] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const [galleryFiles, setGalleryFiles] = useState([]);
+  const [galleryTargetInstitutionId, setGalleryTargetInstitutionId] = useState("");
+  const [galleryItems, setGalleryItems] = useState([]);
   const [adminSection, setAdminSection] = useState("dashboard");
 
   const loadInstitutions = async () => {
@@ -1629,6 +1631,16 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     const res = await fetch(`${apiUrl}/api/programs?include_inactive=1`);
     const data = await res.json();
     setProgramsList(data);
+  };
+
+  const loadInstitutionGallery = async (institutionId) => {
+    if (!apiUrl || !institutionId) {
+      setGalleryItems([]);
+      return;
+    }
+    const res = await fetch(`${apiUrl}/api/institutions/${institutionId}?include_inactive=1`);
+    const data = await res.json();
+    setGalleryItems(Array.isArray(data?.gallery) ? data.gallery : []);
   };
 
   const loadAccounts = async () => {
@@ -1659,6 +1671,11 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       loadAccounts();
     }
   }, [token]);
+
+  React.useEffect(() => {
+    if (galleryTargetInstitutionId) loadInstitutionGallery(galleryTargetInstitutionId);
+    else setGalleryItems([]);
+  }, [galleryTargetInstitutionId]);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -1936,7 +1953,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       });
       const data = await res.json();
       if (res.ok) {
-        const instId = programForm.institution_id;
+        const instId = galleryTargetInstitutionId;
         if (instId) {
           await fetch(`${apiUrl}/api/institutions/${instId}/gallery`, {
             method: "POST",
@@ -1952,6 +1969,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     setGalleryUploading(false);
     setGalleryFiles([]);
     setStatus("Galerie mise à jour");
+    await loadInstitutionGallery(galleryTargetInstitutionId);
   };
 
   const editInstitution = (inst) => {
@@ -1965,7 +1983,28 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       contact: inst.contact || "",
       whatsapp: inst.whatsapp || "",
       logo_url: inst.logo_url || "",
+      share_whatsapp: inst.share_whatsapp || "",
+      share_facebook: inst.share_facebook || "",
+      share_tiktok: inst.share_tiktok || "",
     });
+    setGalleryTargetInstitutionId(String(inst.id));
+    loadInstitutionGallery(inst.id);
+  };
+
+  const deleteGalleryImage = async (imageId) => {
+    if (!galleryTargetInstitutionId || !imageId) return;
+    if (!confirm("Supprimer cette image de la galerie ?")) return;
+    const res = await fetch(`${apiUrl}/api/institutions/${galleryTargetInstitutionId}/gallery/${imageId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setStatus(data.error || "Erreur suppression image");
+      return;
+    }
+    setStatus("Image supprimée");
+    await loadInstitutionGallery(galleryTargetInstitutionId);
   };
 
   const editProgram = (p) => {
@@ -2331,6 +2370,46 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Contact" value={form.contact} onChange={(e) => setForm({ ...form, contact: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="WhatsApp" value={form.whatsapp} onChange={(e) => setForm({ ...form, whatsapp: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Logo URL" value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Lien partage WhatsApp" value={form.share_whatsapp} onChange={(e) => setForm({ ...form, share_whatsapp: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Lien partage Facebook" value={form.share_facebook} onChange={(e) => setForm({ ...form, share_facebook: e.target.value })} />
+            <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Lien partage TikTok" value={form.share_tiktok} onChange={(e) => setForm({ ...form, share_tiktok: e.target.value })} />
+          </div>
+          <div className="mt-4 rounded-2xl border border-[#f1dde3] bg-[#fff9fa] p-4">
+            <div className="text-sm font-semibold text-slate-900">Galerie établissement (max 5)</div>
+            <div className="mt-3 grid gap-3 md:grid-cols-[1fr_auto_auto] md:items-center">
+              <select
+                className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm"
+                value={galleryTargetInstitutionId}
+                onChange={(e) => setGalleryTargetInstitutionId(e.target.value)}
+              >
+                <option value="">Sélectionner un établissement</option>
+                {institutions.map((i) => (
+                  <option key={`gallery-inst-${i.id}`} value={i.id}>{i.name}</option>
+                ))}
+              </select>
+              <label className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">
+                Choisir images
+                <input type="file" className="hidden" multiple onChange={(e) => setGalleryFiles(Array.from(e.target.files || []).slice(0, 5))} />
+              </label>
+              <button onClick={uploadGallery} className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">
+                Upload galerie
+              </button>
+            </div>
+            {galleryUploading && <div className="mt-2 text-sm text-slate-500">Upload...</div>}
+            {galleryItems.length > 0 && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {galleryItems.map((img) => (
+                  <div key={`gallery-${img.id}`} className="overflow-hidden rounded-xl border border-[#f0dde2] bg-white">
+                    <img src={img.image_url} alt="Galerie établissement" className="h-24 w-full object-cover" />
+                    <div className="p-2">
+                      <button onClick={() => deleteGalleryImage(img.id)} className="text-xs text-rose-600 hover:text-rose-700">
+                        Supprimer
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
           <button onClick={createInstitution} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Créer</button>
           <div className="mt-5 space-y-2">
@@ -2377,16 +2456,6 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
               <input type="file" className="hidden" onChange={(e) => uploadImage(e.target.files?.[0])} />
             </label>
             {uploading && <span className="text-sm text-slate-500">Upload...</span>}
-          </div>
-          <div className="mt-4 flex flex-wrap items-center gap-3">
-            <label className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">
-              Galerie (max 5)
-              <input type="file" className="hidden" multiple onChange={(e) => setGalleryFiles(Array.from(e.target.files || []).slice(0, 5))} />
-            </label>
-            <button onClick={uploadGallery} className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">
-              Upload galerie
-            </button>
-            {galleryUploading && <span className="text-sm text-slate-500">Upload...</span>}
           </div>
           <button onClick={createProgram} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Créer</button>
           <div className="mt-5 space-y-2">

@@ -97,10 +97,7 @@ app.post("/api/auth/register", (req, res) => {
 
   const linkedInstitutionId =
     userRole === "institution" && institution_id ? Number(institution_id) : null;
-  const stmt = db.prepare(
-    "INSERT INTO users (name, email, password_hash, role, institution_id, created_at) VALUES (?,?,?,?,?,?)"
-  );
-  stmt.run([name, email, hash, userRole, linkedInstitutionId, createdAt], function (err) {
+  db.run("INSERT INTO users (name, email, password_hash, role, institution_id, created_at) VALUES (?,?,?,?,?,?)", [name, email, hash, userRole, linkedInstitutionId, createdAt], function (err) {
     if (err) return res.status(400).json({ error: err.message });
     res.json({ id: this.lastID, name, email, role: userRole, institution_id: linkedInstitutionId });
   });
@@ -136,10 +133,7 @@ app.post("/api/admin/users", authRequired, adminOnly, (req, res) => {
   if (userRole === "institution" && !linkedInstitutionId) {
     return res.status(400).json({ error: "institution_id is required for institution accounts" });
   }
-  const stmt = db.prepare(
-    "INSERT INTO users (name, email, password_hash, role, institution_id, created_at) VALUES (?,?,?,?,?,?)"
-  );
-  stmt.run([name, email, hash, userRole, linkedInstitutionId, createdAt], function (err) {
+  db.run("INSERT INTO users (name, email, password_hash, role, institution_id, created_at) VALUES (?,?,?,?,?,?)", [name, email, hash, userRole, linkedInstitutionId, createdAt], function (err) {
     if (err) return res.status(400).json({ error: err.message });
     res.json({
       id: this.lastID,
@@ -268,10 +262,8 @@ app.post("/api/institutions", authRequired, adminOnly, (req, res) => {
   if (!name || !city || !country) {
     return res.status(400).json({ error: "Name, city and country are required" });
   }
-  const stmt = db.prepare(
-    "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, share_whatsapp, share_facebook, share_tiktok, active_etablissement, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
-  );
-  stmt.run(
+  db.run(
+    "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, share_whatsapp, share_facebook, share_tiktok, active_etablissement, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
     [
       name,
       handle,
@@ -396,10 +388,8 @@ app.post("/api/programs", authRequired, adminOnly, (req, res) => {
   if (!institution_id || !title || !admission) {
     return res.status(400).json({ error: "Institution, title and admission are required" });
   }
-  const stmt = db.prepare(
-    "INSERT INTO programs (institution_id, field, degree, duration, intake, title, summary, tuition, mode, admission, highlights, outcomes, image_url, active_formation, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-  );
-  stmt.run(
+  db.run(
+    "INSERT INTO programs (institution_id, field, degree, duration, intake, title, summary, tuition, mode, admission, highlights, outcomes, image_url, active_formation, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     [
       institution_id,
       field,
@@ -418,8 +408,8 @@ app.post("/api/programs", authRequired, adminOnly, (req, res) => {
       now(),
     ],
     function (err) {
-      if (err) return res.status(400).json({ error: err.message });
-      res.json({ id: this.lastID });
+    if (err) return res.status(400).json({ error: err.message });
+    res.json({ id: this.lastID });
     }
   );
 });
@@ -479,24 +469,39 @@ app.delete("/api/programs/:id", authRequired, adminOnly, (req, res) => {
   });
 });
 
-app.post("/api/institutions/:id/gallery", authRequired, adminOnly, (req, res) => {
+app.post("/api/institutions/:id/gallery", authRequired, (req, res) => {
   const id = Number(req.params.id);
   const { image_url } = req.body || {};
   if (!image_url) return res.status(400).json({ error: "image_url required" });
-  const stmt = db.prepare(
-    "INSERT INTO gallery_images (institution_id, image_url, created_at) VALUES (?,?,?)"
-  );
-  stmt.run([id, image_url, now()], function (err) {
+  const isAdmin = req.user?.role === "admin";
+  const isOwnerInstitution = req.user?.role === "institution" && Number(req.user?.institution_id) === id;
+  if (!isAdmin && !isOwnerInstitution) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  db.run("INSERT INTO gallery_images (institution_id, image_url, created_at) VALUES (?,?,?)", [id, image_url, now()], function (err) {
     if (err) return res.status(400).json({ error: err.message });
     res.json({ id: this.lastID });
   });
 });
 
-app.delete("/api/institutions/:id/gallery/:imageId", authRequired, adminOnly, (req, res) => {
+app.delete("/api/institutions/:id/gallery/:imageId", authRequired, (req, res) => {
+  const institutionId = Number(req.params.id);
   const imageId = Number(req.params.imageId);
-  db.run("DELETE FROM gallery_images WHERE id = ?", [imageId], function (err) {
-    if (err) return res.status(400).json({ error: err.message });
-    res.json({ ok: this.changes > 0 });
+  const isAdmin = req.user?.role === "admin";
+  const isOwnerInstitution = req.user?.role === "institution" && Number(req.user?.institution_id) === institutionId;
+  if (!isAdmin && !isOwnerInstitution) {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  db.get("SELECT institution_id FROM gallery_images WHERE id = ?", [imageId], (gErr, row) => {
+    if (gErr) return res.status(400).json({ error: gErr.message });
+    if (!row) return res.status(404).json({ error: "Image not found" });
+    if (!isAdmin && Number(row.institution_id) !== institutionId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    db.run("DELETE FROM gallery_images WHERE id = ?", [imageId], function (err) {
+      if (err) return res.status(400).json({ error: err.message });
+      res.json({ ok: this.changes > 0 });
+    });
   });
 });
 
