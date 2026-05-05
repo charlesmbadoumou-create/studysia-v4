@@ -34,6 +34,14 @@ const IMAGE_POOL = {
   ],
 };
 
+const AFRAM_GALLERY = [
+  "https://aframgabon.com/wp-content/uploads/2024/04/a-group-of-young-multi-ethnic-group-of-student-in-university-smiling-and-looking-at-the-tablet.jpg",
+  "https://aframgabon.com/wp-content/uploads/2024/04/group-of-students-painting-at-art-lessons.jpg",
+  "https://aframgabon.com/wp-content/uploads/2024/04/intensive-training-at-sports-center.jpg",
+  "https://aframgabon.com/wp-content/uploads/2024/04/smiling-grey-hair-professor-standing-in-lecture-ro-DNUL3FY.jpg",
+  "https://aframgabon.com/wp-content/uploads/2024/04/beautiful-female-university-professor-smiling-and-NW9KG32.jpg",
+];
+
 const nextIndex = {};
 function pickImage(field) {
   const list = IMAGE_POOL[field] || IMAGE_POOL.Business;
@@ -79,6 +87,13 @@ async function seedAfram() {
     ]
   );
   const institutionId = instInsert.lastID;
+
+  for (const imageUrl of AFRAM_GALLERY) {
+    await run(
+      "INSERT INTO gallery_images (institution_id, image_url, created_at) VALUES (?,?,?)",
+      [institutionId, imageUrl, now()]
+    );
+  }
 
   const admissionLicence =
     "Baccalaureats acceptes: Bac general, scientifique, litteraire, STT, STG, STI. Frais d'inscription: a partir de 210 000 FCFA. Scolarite annuelle: a partir de 990 000 FCFA. Uniforme: 200 000 FCFA.";
