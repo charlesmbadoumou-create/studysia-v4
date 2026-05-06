@@ -74,6 +74,28 @@ function includeInactive(req) {
   return req.query.include_inactive === "1";
 }
 
+function getUserFromAuthHeader(req) {
+  const header = req.headers.authorization || "";
+  const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+  if (!token) return null;
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch {
+    return null;
+  }
+}
+
+function canReadInactive(req, institutionId = null) {
+  const user = getUserFromAuthHeader(req);
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  if (user.role === "institution") {
+    if (institutionId === null) return true;
+    return Number(user.institution_id) === Number(institutionId);
+  }
+  return false;
+}
+
 app.get("/api/health", (req, res) => {
   res.json({ ok: true });
 });
@@ -215,7 +237,7 @@ app.post("/api/auth/login", (req, res) => {
 });
 
 app.get("/api/institutions", (req, res) => {
-  const query = includeInactive(req)
+  const query = includeInactive(req) && canReadInactive(req)
     ? "SELECT * FROM institutions ORDER BY id DESC"
     : "SELECT * FROM institutions WHERE active_etablissement = 1 ORDER BY id DESC";
   db.all(query, [], (err, rows) => {
@@ -226,14 +248,15 @@ app.get("/api/institutions", (req, res) => {
 
 app.get("/api/institutions/:id", (req, res) => {
   const id = Number(req.params.id);
-  const instQuery = includeInactive(req)
+  const showInactive = includeInactive(req) && canReadInactive(req, id);
+  const instQuery = showInactive
     ? "SELECT * FROM institutions WHERE id = ?"
     : "SELECT * FROM institutions WHERE id = ? AND active_etablissement = 1";
   db.get(instQuery, [id], (err, inst) => {
     if (err || !inst) return res.status(404).json({ error: "Not found" });
     db.all("SELECT * FROM gallery_images WHERE institution_id = ?", [id], (gerr, gallery) => {
       if (gerr) return res.status(500).json({ error: gerr.message });
-      const programsQuery = includeInactive(req)
+      const programsQuery = showInactive
         ? "SELECT * FROM programs WHERE institution_id = ?"
         : "SELECT * FROM programs WHERE institution_id = ? AND active_formation = 1";
       db.all(programsQuery, [id], (perr, programs) => {
@@ -312,8 +335,8 @@ app.put("/api/institutions/:id", authRequired, (req, res) => {
   }
   if (isOwnerInstitution && !isAdmin) {
     db.run(
-      "UPDATE institutions SET contact=?, whatsapp=?, share_whatsapp=?, share_facebook=?, share_tiktok=? WHERE id=?",
-      [contact || "", whatsapp || "", share_whatsapp || "", share_facebook || "", share_tiktok || "", id],
+      "UPDATE institutions SET contact=?, whatsapp=?, share_whatsapp=?, share_facebook=?, share_tiktok=?, active_etablissement=? WHERE id=?",
+      [contact || "", whatsapp || "", share_whatsapp || "", share_facebook || "", share_tiktok || "", toActiveFlag(active_etablissement, 1), id],
       function (err) {
         if (err) return res.status(400).json({ error: err.message });
         res.json({ ok: this.changes > 0 });
@@ -354,7 +377,7 @@ app.delete("/api/institutions/:id", authRequired, adminOnly, (req, res) => {
 });
 
 app.get("/api/programs", (req, res) => {
-  const query = includeInactive(req)
+  const query = includeInactive(req) && canReadInactive(req)
     ? "SELECT * FROM programs ORDER BY id DESC"
     : `SELECT p.* 
        FROM programs p
@@ -367,7 +390,7 @@ app.get("/api/programs", (req, res) => {
   });
 });
 
-app.post("/api/programs", authRequired, adminOnly, (req, res) => {
+app.post("/api/programs", authRequired, (req, res) => {
   const {
     institution_id,
     field,
@@ -387,6 +410,12 @@ app.post("/api/programs", authRequired, adminOnly, (req, res) => {
 
   if (!institution_id || !title || !admission) {
     return res.status(400).json({ error: "Institution, title and admission are required" });
+  }
+  const isAdmin = req.user?.role === "admin";
+  const isOwnerInstitution =
+    req.user?.role === "institution" && Number(req.user?.institution_id) === Number(institution_id);
+  if (!isAdmin && !isOwnerInstitution) {
+    return res.status(403).json({ error: "Forbidden" });
   }
   db.run(
     "INSERT INTO programs (institution_id, field, degree, duration, intake, title, summary, tuition, mode, admission, highlights, outcomes, image_url, active_formation, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -414,7 +443,7 @@ app.post("/api/programs", authRequired, adminOnly, (req, res) => {
   );
 });
 
-app.put("/api/programs/:id", authRequired, adminOnly, (req, res) => {
+app.put("/api/programs/:id", authRequired, (req, res) => {
   const id = Number(req.params.id);
   const {
     institution_id,
@@ -432,40 +461,80 @@ app.put("/api/programs/:id", authRequired, adminOnly, (req, res) => {
     image_url,
     active_formation,
   } = req.body || {};
-  if (!institution_id || !title || !admission) {
-    return res.status(400).json({ error: "Institution, title and admission are required" });
-  }
-  db.run(
-    "UPDATE programs SET institution_id=?, field=?, degree=?, duration=?, intake=?, title=?, summary=?, tuition=?, mode=?, admission=?, highlights=?, outcomes=?, image_url=?, active_formation=? WHERE id=?",
-    [
-      institution_id,
-      field,
-      degree,
-      duration,
-      intake,
-      title,
-      summary,
-      tuition,
-      mode,
-      admission,
-      JSON.stringify(highlights || []),
-      JSON.stringify(outcomes || []),
-      image_url,
-      toActiveFlag(active_formation, 1),
-      id,
-    ],
-    function (err) {
-      if (err) return res.status(400).json({ error: err.message });
-      res.json({ ok: this.changes > 0 });
+  const isAdmin = req.user?.role === "admin";
+  if (isAdmin) {
+    if (!institution_id || !title || !admission) {
+      return res.status(400).json({ error: "Institution, title and admission are required" });
     }
-  );
+    db.run(
+      "UPDATE programs SET institution_id=?, field=?, degree=?, duration=?, intake=?, title=?, summary=?, tuition=?, mode=?, admission=?, highlights=?, outcomes=?, image_url=?, active_formation=? WHERE id=?",
+      [
+        institution_id,
+        field,
+        degree,
+        duration,
+        intake,
+        title,
+        summary,
+        tuition,
+        mode,
+        admission,
+        JSON.stringify(highlights || []),
+        JSON.stringify(outcomes || []),
+        image_url,
+        toActiveFlag(active_formation, 1),
+        id,
+      ],
+      function (err) {
+        if (err) return res.status(400).json({ error: err.message });
+        res.json({ ok: this.changes > 0 });
+      }
+    );
+    return;
+  }
+  if (req.user?.role !== "institution") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  db.get("SELECT institution_id FROM programs WHERE id = ?", [id], (findErr, row) => {
+    if (findErr) return res.status(500).json({ error: findErr.message });
+    if (!row) return res.status(404).json({ error: "Not found" });
+    if (Number(row.institution_id) !== Number(req.user?.institution_id)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    db.run(
+      "UPDATE programs SET active_formation=? WHERE id=?",
+      [toActiveFlag(active_formation, 1), id],
+      function (err) {
+        if (err) return res.status(400).json({ error: err.message });
+        res.json({ ok: this.changes > 0 });
+      }
+    );
+  });
 });
 
-app.delete("/api/programs/:id", authRequired, adminOnly, (req, res) => {
+app.delete("/api/programs/:id", authRequired, (req, res) => {
   const id = Number(req.params.id);
-  db.run("DELETE FROM programs WHERE id = ?", [id], function (err) {
-    if (err) return res.status(400).json({ error: err.message });
-    res.json({ ok: this.changes > 0 });
+  const isAdmin = req.user?.role === "admin";
+  if (isAdmin) {
+    db.run("DELETE FROM programs WHERE id = ?", [id], function (err) {
+      if (err) return res.status(400).json({ error: err.message });
+      res.json({ ok: this.changes > 0 });
+    });
+    return;
+  }
+  if (req.user?.role !== "institution") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+  db.get("SELECT institution_id FROM programs WHERE id = ?", [id], (findErr, row) => {
+    if (findErr) return res.status(500).json({ error: findErr.message });
+    if (!row) return res.status(404).json({ error: "Not found" });
+    if (Number(row.institution_id) !== Number(req.user?.institution_id)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    db.run("DELETE FROM programs WHERE id = ?", [id], function (err) {
+      if (err) return res.status(400).json({ error: err.message });
+      res.json({ ok: this.changes > 0 });
+    });
   });
 });
 

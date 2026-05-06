@@ -1169,6 +1169,10 @@ function ProgramSlide({ item, onViewOffer }) {
               src={item.logo || GENERIC_LOGO}
               alt={item.institution}
               className="h-11 w-11 rounded-xl bg-white p-1 object-contain shadow-sm"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = GENERIC_LOGO;
+              }}
             />
             <h1 className="text-xl font-semibold leading-tight text-slate-900 sm:text-2xl lg:text-4xl">{item.title}</h1>
           </div>
@@ -1477,7 +1481,15 @@ function InstitutionDetailScreen({ item, onBack, onViewOffer, programsData }) {
           <div className="p-6">
             <div className="flex items-start gap-4">
               <div className="flex h-[72px] w-[72px] items-center justify-center overflow-hidden rounded-[24px] bg-white p-1 ring-1 ring-[#f1dde3]">
-                <img src={item.logo || GENERIC_LOGO} alt={`${item.institution} logo`} className="h-full w-full object-contain" />
+                <img
+                  src={item.logo || GENERIC_LOGO}
+                  alt={`${item.institution} logo`}
+                  className="h-full w-full object-contain"
+                  onError={(e) => {
+                    e.currentTarget.onerror = null;
+                    e.currentTarget.src = GENERIC_LOGO;
+                  }}
+                />
               </div>
               <div>
                 <div className="text-xl font-semibold text-slate-900">{item.institution}</div>
@@ -1594,6 +1606,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     share_whatsapp: "",
     share_facebook: "",
     share_tiktok: "",
+    active_etablissement: 1,
   });
   const [programForm, setProgramForm] = useState({
     institution_id: "",
@@ -1609,6 +1622,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     highlights: "",
     outcomes: "",
     image_url: "",
+    active_formation: 1,
   });
   const [uploading, setUploading] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
@@ -1619,14 +1633,18 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
 
   const loadInstitutions = async () => {
     if (!apiUrl) return;
-    const res = await fetch(`${apiUrl}/api/institutions?include_inactive=1`);
+    const res = await fetch(`${apiUrl}/api/institutions?include_inactive=1`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     const data = await res.json();
     setInstitutions(data);
   };
 
   const loadPrograms = async () => {
     if (!apiUrl) return;
-    const res = await fetch(`${apiUrl}/api/programs?include_inactive=1`);
+    const res = await fetch(`${apiUrl}/api/programs?include_inactive=1`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     const data = await res.json();
     setProgramsList(data);
   };
@@ -1636,7 +1654,9 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       setGalleryItems([]);
       return;
     }
-    const res = await fetch(`${apiUrl}/api/institutions/${institutionId}?include_inactive=1`);
+    const res = await fetch(`${apiUrl}/api/institutions/${institutionId}?include_inactive=1`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
     const data = await res.json();
     setGalleryItems(Array.isArray(data?.gallery) ? data.gallery : []);
   };
@@ -1725,6 +1745,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         share_whatsapp: "",
         share_facebook: "",
         share_tiktok: "",
+        active_etablissement: 1,
       });
       await loadInstitutions();
       if (!programForm.institution_id && data.id) setProgramForm({ ...programForm, institution_id: data.id });
@@ -1984,6 +2005,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       share_whatsapp: inst.share_whatsapp || "",
       share_facebook: inst.share_facebook || "",
       share_tiktok: inst.share_tiktok || "",
+      active_etablissement: Number(inst.active_etablissement ?? 1),
     });
     setGalleryTargetInstitutionId(String(inst.id));
     loadInstitutionGallery(inst.id);
@@ -2025,7 +2047,70 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         try { return (p.outcomes ? JSON.parse(p.outcomes) : []).join(", "); } catch { return ""; }
       })(),
       image_url: p.image_url || "",
+      active_formation: Number(p.active_formation ?? 1),
     });
+  };
+
+  const toggleInstitutionActive = async (inst) => {
+    const payload = {
+      name: inst.name || "",
+      handle: inst.handle || "",
+      city: inst.city || "",
+      country: inst.country || "",
+      address: inst.address || "",
+      contact: inst.contact || "",
+      whatsapp: inst.whatsapp || "",
+      logo_url: inst.logo_url || "",
+      share_whatsapp: inst.share_whatsapp || "",
+      share_facebook: inst.share_facebook || "",
+      share_tiktok: inst.share_tiktok || "",
+      active_etablissement: Number(inst.active_etablissement) ? 0 : 1,
+    };
+    const res = await fetch(`${apiUrl}/api/institutions/${inst.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    setStatus(res.ok ? "Visibilite etablissement mise a jour" : data.error || "Erreur");
+    if (res.ok) await loadInstitutions();
+  };
+
+  const toggleProgramActive = async (p) => {
+    const payload = {
+      institution_id: p.institution_id,
+      field: p.field || "",
+      degree: p.degree || "",
+      duration: p.duration || "",
+      intake: p.intake || "",
+      title: p.title || "",
+      summary: p.summary || "",
+      tuition: p.tuition || "",
+      mode: p.mode || "",
+      admission: p.admission || "",
+      highlights: (() => {
+        try { return p.highlights ? JSON.parse(p.highlights) : []; } catch { return []; }
+      })(),
+      outcomes: (() => {
+        try { return p.outcomes ? JSON.parse(p.outcomes) : []; } catch { return []; }
+      })(),
+      image_url: p.image_url || "",
+      active_formation: Number(p.active_formation) ? 0 : 1,
+    };
+    const res = await fetch(`${apiUrl}/api/programs/${p.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    setStatus(res.ok ? "Visibilite formation mise a jour" : data.error || "Erreur");
+    if (res.ok) await loadPrograms();
   };
 
   const exportCSV = () => {
@@ -2371,6 +2456,14 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Lien partage WhatsApp" value={form.share_whatsapp} onChange={(e) => setForm({ ...form, share_whatsapp: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Lien partage Facebook" value={form.share_facebook} onChange={(e) => setForm({ ...form, share_facebook: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Lien partage TikTok" value={form.share_tiktok} onChange={(e) => setForm({ ...form, share_tiktok: e.target.value })} />
+            <label className="inline-flex items-center gap-2 rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm">
+              <input
+                type="checkbox"
+                checked={Number(form.active_etablissement) === 1}
+                onChange={(e) => setForm({ ...form, active_etablissement: e.target.checked ? 1 : 0 })}
+              />
+              Etablissement actif (visible)
+            </label>
           </div>
           <div className="mt-4 rounded-2xl border border-[#f1dde3] bg-[#fff9fa] p-4">
             <div className="text-sm font-semibold text-slate-900">Galerie établissement (max 5)</div>
@@ -2413,8 +2506,16 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
           <div className="mt-5 space-y-2">
             {institutions.map((i) => (
               <div key={i.id} className="flex items-center justify-between rounded-2xl border border-[#f1dde3] bg-[#fff9fa] px-4 py-3 text-sm">
-                <div>{i.name}</div>
                 <div className="flex items-center gap-3">
+                  <span>{i.name}</span>
+                  <span className={`rounded-full px-2 py-1 text-xs ${Number(i.active_etablissement) === 1 ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>
+                    {Number(i.active_etablissement) === 1 ? "Actif" : "Masqué"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => toggleInstitutionActive(i)} className="text-slate-600 hover:text-slate-900">
+                    {Number(i.active_etablissement) === 1 ? "Masquer" : "Afficher"}
+                  </button>
                   <button onClick={() => editInstitution(i)} className="text-slate-600 hover:text-slate-900">Éditer</button>
                   <button onClick={() => deleteInstitution(i.id)} className="text-slate-600 hover:text-slate-900">Supprimer</button>
                 </div>
@@ -2445,6 +2546,14 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Condition d’accès *" value={programForm.admission} onChange={(e) => setProgramForm({ ...programForm, admission: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Points forts (comma)" value={programForm.highlights} onChange={(e) => setProgramForm({ ...programForm, highlights: e.target.value })} />
             <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Débouchés (comma)" value={programForm.outcomes} onChange={(e) => setProgramForm({ ...programForm, outcomes: e.target.value })} />
+            <label className="inline-flex items-center gap-2 rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm">
+              <input
+                type="checkbox"
+                checked={Number(programForm.active_formation) === 1}
+                onChange={(e) => setProgramForm({ ...programForm, active_formation: e.target.checked ? 1 : 0 })}
+              />
+              Formation active (visible)
+            </label>
           </div>
           <textarea className="mt-3 w-full rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Description" rows={3} value={programForm.summary} onChange={(e) => setProgramForm({ ...programForm, summary: e.target.value })} />
           <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -2459,8 +2568,16 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
           <div className="mt-5 space-y-2">
             {programsList.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-2xl border border-[#f1dde3] bg-[#fff9fa] px-4 py-3 text-sm">
-                <div>{p.title}</div>
                 <div className="flex items-center gap-3">
+                  <span>{p.title}</span>
+                  <span className={`rounded-full px-2 py-1 text-xs ${Number(p.active_formation) === 1 ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>
+                    {Number(p.active_formation) === 1 ? "Actif" : "Masqué"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => toggleProgramActive(p)} className="text-slate-600 hover:text-slate-900">
+                    {Number(p.active_formation) === 1 ? "Masquer" : "Afficher"}
+                  </button>
                   <button onClick={() => editProgram(p)} className="text-slate-600 hover:text-slate-900">Éditer</button>
                   <button onClick={() => deleteProgram(p.id)} className="text-slate-600 hover:text-slate-900">Supprimer</button>
                 </div>
