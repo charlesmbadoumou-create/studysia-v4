@@ -1223,26 +1223,11 @@ function ProgramSlide({ item, onViewOffer }) {
         }}
       />
 
-      {/* Desktop: centered 9:16 frame (prevents awkward cropping / huge whitespace). */}
-      <div className="absolute inset-0 hidden lg:flex items-center justify-center px-6 pt-24 pb-24">
-        <div className="aspect-[9/16] w-[min(560px,44vw)] max-h-[calc(100vh-170px)] overflow-hidden rounded-[44px] border border-white/60 bg-white/40 shadow-2xl">
-          <img
-            src={visualUrl}
-            alt={item.title}
-            className="h-full w-full object-contain"
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = item.image || GENERIC_PROGRAM_IMAGE;
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Mobile/tablet: full-screen. */}
+      {/* Foreground visual (full-screen on all breakpoints). */}
       <img
         src={visualUrl}
         alt={item.title}
-        className="absolute inset-0 h-full w-full object-cover lg:hidden"
+        className="absolute inset-0 h-full w-full object-cover"
         onError={(e) => {
           e.currentTarget.onerror = null;
           e.currentTarget.src = item.image || GENERIC_PROGRAM_IMAGE;
