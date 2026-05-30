@@ -1383,8 +1383,8 @@ function InstitutionSlide({ item }) {
 
 function FeedSection({ item, onViewOffer }) {
   return (
-    <section className="snap-start">
-      <div className="h-screen">
+    <section className="h-screen snap-start snap-always">
+      <div className="h-full overflow-hidden">
         <ProgramSlide item={item} onViewOffer={onViewOffer} />
       </div>
     </section>

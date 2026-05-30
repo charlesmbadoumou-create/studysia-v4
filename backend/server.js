@@ -128,6 +128,7 @@ function programVisualSvg({ program, institution }) {
 
   // 1080x1920 looks great on mobile (TikTok-style feed); we render it as a full-screen visual.
   // Keep it SVG-only (no remote <image>) to avoid CORS issues with logo URLs.
+  // Pop-vibrant: keep the center card readable but not "washed out".
   return `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
   <defs>
@@ -141,8 +142,8 @@ function programVisualSvg({ program, institution }) {
       <stop offset="1" stop-color="${palette.c}"/>
     </linearGradient>
     <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#ffffff" stop-opacity="0.86"/>
-      <stop offset="1" stop-color="#ffffff" stop-opacity="0.70"/>
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.78"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.60"/>
     </linearGradient>
     <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
       <path d="M48 0H0V48" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="1"/>
@@ -158,8 +159,8 @@ function programVisualSvg({ program, institution }) {
   <!-- vibrant background -->
   <rect width="1080" height="1920" fill="url(#bg)"/>
   <rect width="1080" height="1920" fill="url(#grid)"/>
-  <circle cx="170" cy="300" r="220" fill="#ffffff" fill-opacity="0.18"/>
-  <circle cx="940" cy="520" r="260" fill="#ffffff" fill-opacity="0.14"/>
+  <circle cx="170" cy="300" r="220" fill="#ffffff" fill-opacity="0.22"/>
+  <circle cx="940" cy="520" r="260" fill="#ffffff" fill-opacity="0.18"/>
   <circle cx="860" cy="260" r="160" fill="#000000" fill-opacity="0.10"/>
   <circle cx="260" cy="620" r="180" fill="#000000" fill-opacity="0.08"/>
 
@@ -167,6 +168,10 @@ function programVisualSvg({ program, institution }) {
   <g filter="url(#cardShadow)">
     <rect x="70" y="300" width="940" height="1260" rx="64" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.55"/>
   </g>
+
+  <!-- glow rings -->
+  <circle cx="115" cy="1550" r="260" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="10"/>
+  <circle cx="980" cy="1560" r="190" fill="none" stroke="#000000" stroke-opacity="0.10" stroke-width="8"/>
 
   <g>
     <rect x="130" y="370" width="300" height="64" rx="32" fill="url(#pill)"/>
