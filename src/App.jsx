@@ -1225,7 +1225,7 @@ function ProgramSlide({ item, onViewOffer }) {
 
       {/* Desktop: centered 9:16 frame (prevents awkward cropping / huge whitespace). */}
       <div className="absolute inset-0 hidden lg:flex items-center justify-center px-6 pt-24 pb-24">
-        <div className="h-full max-h-[calc(100vh-200px)] aspect-[9/16] w-auto overflow-hidden rounded-[36px] border border-white/60 bg-white/40 shadow-2xl">
+        <div className="aspect-[9/16] w-[min(560px,44vw)] max-h-[calc(100vh-170px)] overflow-hidden rounded-[44px] border border-white/60 bg-white/40 shadow-2xl">
           <img
             src={visualUrl}
             alt={item.title}

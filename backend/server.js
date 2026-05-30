@@ -125,6 +125,8 @@ function programVisualSvg({ program, institution }) {
   const meta2 = [duration, field].filter(Boolean).join(" · ");
   const place = [city, country].filter(Boolean).join(" — ");
   const titleLines = titleToLines(program?.title || "Formation", 24, 3).map(escapeXml);
+  const instLines = titleToLines(institution?.name || "Établissement", 32, 2).map(escapeXml);
+  const admissionLines = titleToLines(program?.admission || "", 28, 2).map(escapeXml);
 
   // 1080x1920 looks great on mobile (TikTok-style feed); we render it as a full-screen visual.
   // Keep it SVG-only (no remote <image>) to avoid CORS issues with logo URLs.
@@ -194,7 +196,9 @@ function programVisualSvg({ program, institution }) {
 
   <g>
     <rect x="130" y="980" width="820" height="110" rx="34" fill="#ffffff" fill-opacity="0.75" stroke="#ffffff" stroke-opacity="0.55"/>
-    <text x="170" y="1048" font-family="Arial, sans-serif" font-size="30" fill="#0f172a" font-weight="900">${inst}</text>
+    <text x="170" y="1032" font-family="Arial, sans-serif" font-size="30" fill="#0f172a" font-weight="900">
+      ${instLines.map((ln, idx) => `<tspan x="170" dy="${idx === 0 ? 0 : 34}">${ln}</tspan>`).join("")}
+    </text>
     <text x="170" y="1088" font-family="Arial, sans-serif" font-size="24" fill="#334155" font-weight="700" opacity="0.85">${escapeXml(place)}</text>
   </g>
 
@@ -207,7 +211,9 @@ function programVisualSvg({ program, institution }) {
   <g>
     <rect x="550" y="1140" width="400" height="140" rx="38" fill="#ffffff" fill-opacity="0.75" stroke="#ffffff" stroke-opacity="0.55"/>
     <text x="590" y="1200" font-family="Arial, sans-serif" font-size="24" fill="#0f172a" font-weight="900">Admission</text>
-    <text x="590" y="1252" font-family="Arial, sans-serif" font-size="28" fill="#0f172a" font-weight="800">${admission}</text>
+    <text x="590" y="1242" font-family="Arial, sans-serif" font-size="26" fill="#0f172a" font-weight="800">
+      ${admissionLines.map((ln, idx) => `<tspan x="590" dy="${idx === 0 ? 0 : 32}">${ln}</tspan>`).join("")}
+    </text>
   </g>
 
   <g>
