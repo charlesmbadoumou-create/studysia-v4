@@ -124,7 +124,11 @@ function programVisualSvg({ program, institution }) {
   const meta = [degree, mode].filter(Boolean).join(" · ");
   const meta2 = [duration, field].filter(Boolean).join(" · ");
   const place = [city, country].filter(Boolean).join(" — ");
-  const titleLines = titleToLines(program?.title || "Formation", 24, 3).map(escapeXml);
+  const rawTitle = String(program?.title || "Formation");
+  const titleLinesRaw = titleToLines(rawTitle, 22, 3);
+  const titleLines = titleLinesRaw.map(escapeXml);
+  const titleFontSize = titleLinesRaw.length <= 1 ? 78 : titleLinesRaw.length === 2 ? 70 : 60;
+  const titleLineGap = titleLinesRaw.length <= 1 ? 0 : titleLinesRaw.length === 2 ? 82 : 74;
   const instLines = titleToLines(institution?.name || "Établissement", 32, 2).map(escapeXml);
   const admissionLines = titleToLines(program?.admission || "", 28, 2).map(escapeXml);
 
@@ -190,8 +194,8 @@ function programVisualSvg({ program, institution }) {
     <text x="850" y="539" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#ffffff" font-weight="800">Homologué</text>
   </g>` : ""}
 
-  <text x="130" y="720" font-family="Arial, sans-serif" font-size="76" fill="#0b1220" font-weight="900">
-    ${titleLines.map((ln, idx) => `<tspan x="130" dy="${idx === 0 ? 0 : 88}">${ln}</tspan>`).join("")}
+  <text x="130" y="710" font-family="Arial, sans-serif" font-size="${titleFontSize}" fill="#0b1220" font-weight="900">
+    ${titleLines.map((ln, idx) => `<tspan x="130" dy="${idx === 0 ? 0 : titleLineGap}">${ln}</tspan>`).join("")}
   </text>
 
   <g>
