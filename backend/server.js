@@ -27,7 +27,19 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage });
 
-app.use(cors({ origin: CORS_ORIGIN }));
+const allowedOrigins = CORS_ORIGIN === "*"
+  ? ["*"]
+  : CORS_ORIGIN.split(",").map((v) => v.trim()).filter(Boolean);
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes("*")) return callback(null, true);
+      return callback(null, allowedOrigins.includes(origin));
+    },
+  })
+);
 app.use(express.json());
 app.use("/uploads", express.static(uploadsDir));
 
@@ -35,6 +47,96 @@ await initDb();
 
 function now() {
   return new Date().toISOString();
+}
+
+function escapeXml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+function programVisualSvg({ program, institution }) {
+  const title = escapeXml(program?.title || "Formation");
+  const inst = escapeXml(institution?.name || "Établissement");
+  const city = escapeXml(institution?.city || "");
+  const country = escapeXml(institution?.country || "");
+  const degree = escapeXml(program?.degree || "");
+  const mode = escapeXml(program?.mode || "");
+  const tuition = escapeXml(program?.tuition || "");
+  const homologue = Number(institution?.homologue || 0) === 1;
+
+  const meta = [degree, mode].filter(Boolean).join(" · ");
+  const place = [city, country].filter(Boolean).join(" — ");
+
+  // 1080x1920 looks great on mobile (TikTok-style feed); we render it as a full-screen visual.
+  // Keep it SVG-only (no remote <image>) to avoid CORS issues with logo URLs.
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff1f6"/>
+      <stop offset="0.55" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#fffaf0"/>
+    </linearGradient>
+    <linearGradient id="pill" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#b7006a"/>
+      <stop offset="1" stop-color="#ff6a00"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#f7b1c6" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+
+  <!-- decorative bubbles echoing Studysia logo -->
+  <circle cx="145" cy="320" r="150" fill="#ff2aa3" fill-opacity="0.18"/>
+  <circle cx="255" cy="250" r="120" fill="#ff6a00" fill-opacity="0.14"/>
+  <circle cx="195" cy="455" r="105" fill="#40d36b" fill-opacity="0.12"/>
+  <circle cx="925" cy="520" r="210" fill="#ff6a00" fill-opacity="0.10"/>
+  <circle cx="845" cy="410" r="160" fill="#ff2aa3" fill-opacity="0.10"/>
+
+  <g filter="url(#softShadow)">
+    <rect x="90" y="320" width="900" height="1120" rx="56" fill="#ffffff" stroke="#f2d7e3"/>
+  </g>
+
+  <g>
+    <rect x="140" y="385" width="260" height="56" rx="28" fill="url(#pill)"/>
+    <text x="270" y="423" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#ffffff" font-weight="700" letter-spacing="2">
+      STUDYSIA
+    </text>
+  </g>
+
+  <text x="140" y="535" font-family="Arial, sans-serif" font-size="28" fill="#334155" font-weight="700">${escapeXml(meta)}</text>
+  ${homologue ? `<g>
+    <rect x="140" y="565" width="210" height="52" rx="26" fill="#d1fae5"/>
+    <text x="245" y="600" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#047857" font-weight="700">Homologué</text>
+  </g>` : ""}
+
+  <text x="140" y="720" font-family="Arial, sans-serif" font-size="74" fill="#0f172a" font-weight="800">${title}</text>
+
+  <text x="140" y="825" font-family="Arial, sans-serif" font-size="34" fill="#334155" font-weight="700">${inst}</text>
+  <text x="140" y="880" font-family="Arial, sans-serif" font-size="26" fill="#64748b">${escapeXml(place)}</text>
+
+  ${tuition ? `<g>
+    <rect x="140" y="980" width="800" height="92" rx="30" fill="#fff7ed" stroke="#ffe4cc"/>
+    <text x="170" y="1038" font-family="Arial, sans-serif" font-size="28" fill="#334155" font-weight="700">Coût</text>
+    <text x="300" y="1038" font-family="Arial, sans-serif" font-size="28" fill="#0f172a">${tuition}</text>
+  </g>` : ""}
+
+  <g>
+    <rect x="140" y="1125" width="800" height="92" rx="30" fill="#fff7fa" stroke="#f5d7e4"/>
+    <text x="170" y="1183" font-family="Arial, sans-serif" font-size="28" fill="#334155" font-weight="700">Accès</text>
+    <text x="300" y="1183" font-family="Arial, sans-serif" font-size="28" fill="#0f172a">${escapeXml(program?.admission || "")}</text>
+  </g>
+
+  <text x="140" y="1510" font-family="Arial, sans-serif" font-size="22" fill="#94a3b8">
+    Glissez pour voir les détails · studysia.com
+  </text>
+</svg>`;
 }
 
 function signToken(user) {
@@ -236,6 +338,30 @@ app.post("/api/auth/login", (req, res) => {
   });
 });
 
+app.post("/api/auth/change-password", authRequired, (req, res) => {
+  const { current_password, new_password } = req.body || {};
+  if (!current_password || !new_password) {
+    return res.status(400).json({ error: "Missing fields" });
+  }
+  if (String(new_password).trim().length < 6) {
+    return res.status(400).json({ error: "Le nouveau mot de passe doit contenir au moins 6 caractères" });
+  }
+
+  db.get("SELECT id, password_hash FROM users WHERE id = ?", [req.user.id], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: "Utilisateur introuvable" });
+
+    const ok = bcrypt.compareSync(String(current_password), row.password_hash || "");
+    if (!ok) return res.status(401).json({ error: "Mot de passe actuel incorrect" });
+
+    const nextHash = bcrypt.hashSync(String(new_password).trim(), 10);
+    db.run("UPDATE users SET password_hash = ? WHERE id = ?", [nextHash, req.user.id], function (uErr) {
+      if (uErr) return res.status(400).json({ error: uErr.message });
+      return res.json({ ok: this.changes > 0 });
+    });
+  });
+});
+
 app.get("/api/institutions", (req, res) => {
   const query = includeInactive(req) && canReadInactive(req)
     ? "SELECT * FROM institutions ORDER BY id DESC"
@@ -280,13 +406,14 @@ app.post("/api/institutions", authRequired, adminOnly, (req, res) => {
     share_whatsapp,
     share_facebook,
     share_tiktok,
+    homologue,
     active_etablissement,
   } = req.body || {};
   if (!name || !city || !country) {
     return res.status(400).json({ error: "Name, city and country are required" });
   }
   db.run(
-    "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, share_whatsapp, share_facebook, share_tiktok, active_etablissement, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+    "INSERT INTO institutions (name, handle, city, country, address, contact, whatsapp, logo_url, share_whatsapp, share_facebook, share_tiktok, homologue, active_etablissement, created_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
     [
       name,
       handle,
@@ -299,6 +426,7 @@ app.post("/api/institutions", authRequired, adminOnly, (req, res) => {
       share_whatsapp || "",
       share_facebook || "",
       share_tiktok || "",
+      toActiveFlag(homologue, 0),
       toActiveFlag(active_etablissement, 1),
       now(),
     ],
@@ -323,6 +451,7 @@ app.put("/api/institutions/:id", authRequired, (req, res) => {
     share_whatsapp,
     share_facebook,
     share_tiktok,
+    homologue,
     active_etablissement,
   } = req.body || {};
   const isAdmin = req.user?.role === "admin";
@@ -335,17 +464,20 @@ app.put("/api/institutions/:id", authRequired, (req, res) => {
   }
   if (isOwnerInstitution && !isAdmin) {
     db.run(
-      "UPDATE institutions SET contact=?, whatsapp=?, share_whatsapp=?, share_facebook=?, share_tiktok=?, active_etablissement=? WHERE id=?",
-      [contact || "", whatsapp || "", share_whatsapp || "", share_facebook || "", share_tiktok || "", toActiveFlag(active_etablissement, 1), id],
+      "UPDATE institutions SET contact=?, whatsapp=?, share_whatsapp=?, share_facebook=?, share_tiktok=?, homologue=?, active_etablissement=? WHERE id=?",
+      [contact || "", whatsapp || "", share_whatsapp || "", share_facebook || "", share_tiktok || "", toActiveFlag(homologue, 0), toActiveFlag(active_etablissement, 1), id],
       function (err) {
         if (err) return res.status(400).json({ error: err.message });
-        res.json({ ok: this.changes > 0 });
+        db.get("SELECT * FROM institutions WHERE id = ?", [id], (getErr, row) => {
+          if (getErr) return res.status(500).json({ error: getErr.message });
+          res.json({ ok: this.changes > 0, institution: row || null });
+        });
       }
     );
     return;
   }
   db.run(
-    "UPDATE institutions SET name=?, handle=?, city=?, country=?, address=?, contact=?, whatsapp=?, logo_url=?, share_whatsapp=?, share_facebook=?, share_tiktok=?, active_etablissement=? WHERE id=?",
+    "UPDATE institutions SET name=?, handle=?, city=?, country=?, address=?, contact=?, whatsapp=?, logo_url=?, share_whatsapp=?, share_facebook=?, share_tiktok=?, homologue=?, active_etablissement=? WHERE id=?",
     [
       name,
       handle,
@@ -358,12 +490,16 @@ app.put("/api/institutions/:id", authRequired, (req, res) => {
       share_whatsapp || "",
       share_facebook || "",
       share_tiktok || "",
+      toActiveFlag(homologue, 0),
       toActiveFlag(active_etablissement, 1),
       id,
     ],
     function (err) {
       if (err) return res.status(400).json({ error: err.message });
-      res.json({ ok: this.changes > 0 });
+      db.get("SELECT * FROM institutions WHERE id = ?", [id], (getErr, row) => {
+        if (getErr) return res.status(500).json({ error: getErr.message });
+        res.json({ ok: this.changes > 0, institution: row || null });
+      });
     }
   );
 });
@@ -388,6 +524,38 @@ app.get("/api/programs", (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
+});
+
+// Auto-generated visual for a program (TikTok-style card), SVG-only for maximum compatibility.
+app.get("/api/programs/:id/visual.svg", (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isFinite(id)) return res.status(400).send("Bad id");
+
+  db.get(
+    `SELECT p.*, i.name as institution_name, i.city as institution_city, i.country as institution_country, i.homologue as institution_homologue
+     FROM programs p
+     INNER JOIN institutions i ON i.id = p.institution_id
+     WHERE p.id = ?`,
+    [id],
+    (err, row) => {
+      if (err) return res.status(500).send("DB error");
+      if (!row) return res.status(404).send("Not found");
+
+      const svg = programVisualSvg({
+        program: row,
+        institution: {
+          name: row.institution_name,
+          city: row.institution_city,
+          country: row.institution_country,
+          homologue: row.institution_homologue,
+        },
+      });
+
+      res.setHeader("Content-Type", "image/svg+xml; charset=utf-8");
+      res.setHeader("Cache-Control", "public, max-age=3600");
+      res.send(svg);
+    }
+  );
 });
 
 app.post("/api/programs", authRequired, (req, res) => {

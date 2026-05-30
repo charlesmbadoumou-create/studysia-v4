@@ -1,6 +1,19 @@
-﻿@tailwind base;
+@tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --studysia-pink: #e0007a;
+  --studysia-fuchsia: #b80070;
+  --studysia-orange: #ff7a00;
+  --studysia-yellow: #f4c800;
+  --studysia-ink: #1c2233;
+  --studysia-soft: #fff7fb;
+  --studysia-soft-2: #fffaf3;
+  --studysia-muted: #4b556c;
+  --studysia-line: #f4c7db;
+  --studysia-shadow: 0 18px 40px rgba(184, 0, 112, 0.08);
+}
 
 html,
 body,
@@ -12,5 +25,60 @@ body,
 body {
   margin: 0;
   font-family: "Poppins", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  background: #ffffff;
+  background:
+    radial-gradient(1200px 600px at 12% -15%, #ffecf7 0%, transparent 56%),
+    radial-gradient(900px 520px at 95% -20%, #fff6e4 0%, transparent 54%),
+    #ffffff;
+}
+
+.brand-vivid .bg-slate-900 {
+  background: linear-gradient(115deg, var(--studysia-fuchsia) 0%, var(--studysia-pink) 52%, var(--studysia-orange) 100%) !important;
+  border: none !important;
+  box-shadow: 0 10px 24px rgba(224, 0, 122, 0.22) !important;
+}
+
+.brand-vivid .text-slate-900 {
+  color: var(--studysia-ink);
+}
+
+.brand-vivid .bg-\[\#fff4f6\],
+.brand-vivid .bg-\[\#fff8fa\],
+.brand-vivid .bg-\[\#fff9fa\],
+.brand-vivid .bg-\[\#fff3f5\] {
+  background: linear-gradient(180deg, var(--studysia-soft), var(--studysia-soft-2)) !important;
+}
+
+.brand-vivid .border-\[\#f1dde3\],
+.brand-vivid .border-\[\#f0dde2\],
+.brand-vivid .border-\[\#f2dde3\],
+.brand-vivid .border-\[\#f3dce2\] {
+  border-color: var(--studysia-line) !important;
+}
+
+.brand-vivid .text-slate-600,
+.brand-vivid .text-slate-500 {
+  color: var(--studysia-muted) !important;
+}
+
+.brand-vivid .shadow-lg,
+.brand-vivid .shadow-xl,
+.brand-vivid .shadow-sm {
+  box-shadow: var(--studysia-shadow) !important;
+}
+
+.brand-vivid button {
+  transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+}
+
+.brand-vivid button:hover {
+  transform: translateY(-1px);
+  filter: saturate(1.06);
+}
+
+.brand-vivid input:focus,
+.brand-vivid textarea:focus,
+.brand-vivid select:focus {
+  outline: 2px solid #ff8e2c !important;
+  outline-offset: 1px;
+  border-color: #ff8e2c !important;
 }

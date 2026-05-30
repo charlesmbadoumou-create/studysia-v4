@@ -16,7 +16,6 @@ import {
   Plus,
   Lock,
   LogIn,
-  UserPlus,
   CheckCircle2,
   Sparkles,
   Briefcase,
@@ -37,7 +36,8 @@ const AUDIO_TRACKS = [
 ];
 const DEFAULT_ADMISSION = "Dossier + entretien";
 const DEFAULT_CONTACT = "contact@etablissement.ga";
-const GENERIC_LOGO = "/logo-afram.png";
+const GENERIC_LOGO = "/logo-studysia.jpg";
+const GENERIC_PROGRAM_IMAGE = "https://images.unsplash.com/photo-1523050854058-8df90110c9f1?auto=format&fit=crop&w=1600&q=80";
 
 const API_URL = import.meta.env.VITE_API_URL || "https://api.studysia.com";
 const normalizeText = (value = "") =>
@@ -83,6 +83,7 @@ const fixProgram = (item) => ({
   highlights: fixArray(item.highlights),
   outcomes: fixArray(item.outcomes),
   gallery: Array.isArray(item.gallery) ? item.gallery.map((img) => fixText(img)) : [],
+  homologue: Number(item.homologue || 0),
 });
 
 const filters = [
@@ -911,9 +912,48 @@ function FilterPanel({ selectedFilter, setSelectedFilter, open, setOpen }) {
   );
 }
 
-function AuthModal({ open, onClose, onLogin, onOpenPublish, onOpenAdmin }) {
-  const [mode, setMode] = useState("candidate");
+function AuthModal({ open, onClose, onLogin, onRegisterUser }) {
+  const [mode, setMode] = useState("login");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   if (!open) return null;
+
+  const handleSubmit = async () => {
+    setError("");
+    if (mode === "register") {
+      if (!name.trim() || !email.trim() || !password.trim()) {
+        setError("Veuillez renseigner nom, email et mot de passe.");
+        return;
+      }
+      setSubmitting(true);
+      try {
+        const ok = await onRegisterUser({ name: name.trim(), email: email.trim(), password });
+        if (!ok) setError("Inscription impossible.");
+      } catch (e) {
+        setError(e?.message || "Inscription impossible.");
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
+    if (!email.trim() || !password.trim()) {
+      setError("Veuillez renseigner votre email et mot de passe.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const ok = await onLogin({ email: email.trim(), password });
+      if (!ok) setError("Connexion impossible.");
+    } catch (e) {
+      setError(e?.message || "Identifiants invalides.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[80] bg-black/35 backdrop-blur-sm">
@@ -933,29 +973,34 @@ function AuthModal({ open, onClose, onLogin, onOpenPublish, onOpenAdmin }) {
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-lg font-semibold text-slate-900">Accès à la plateforme</div>
-                <div className="mt-1 text-sm text-slate-500">Compte établissement ou compte usager</div>
               </div>
               <button onClick={onClose} className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100">
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="mt-6 flex gap-2 rounded-full bg-[#fff4f6] p-1">
-              <button onClick={() => setMode("candidate")} className={`flex-1 rounded-full px-4 py-2.5 text-sm ${mode === "candidate" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}>
-                Usager
-              </button>
-              <button onClick={() => setMode("institution")} className={`flex-1 rounded-full px-4 py-2.5 text-sm ${mode === "institution" ? "bg-white text-slate-900 shadow-sm" : "text-slate-600"}`}>
-                Établissement
-              </button>
-              <button onClick={onOpenAdmin} className="rounded-full px-4 py-2.5 text-sm text-slate-600 hover:bg-white">
-                Admin
-              </button>
-            </div>
-
             <div className="mt-6 grid gap-4">
-              <input className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Email" />
-              <input className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Mot de passe" type="password" />
-              {mode === "institution" && <input className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm text-slate-900 outline-none" placeholder="Nom de l’établissement" />}
+              {mode === "register" && (
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+                  placeholder="Nom complet"
+                />
+              )}
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+                placeholder="Email"
+              />
+              <input
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm text-slate-900 outline-none"
+                placeholder="Mot de passe"
+                type="password"
+              />
             </div>
 
             <div className="mt-6 space-y-3 rounded-[26px] border border-[#f4d8df] bg-[#fff8fa] p-4 text-sm text-slate-600">
@@ -963,17 +1008,26 @@ function AuthModal({ open, onClose, onLogin, onOpenPublish, onOpenAdmin }) {
               <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-pink-500" /> Publication réservée aux établissements connectés.</div>
               <div className="flex items-start gap-2"><CheckCircle2 className="mt-0.5 h-4 w-4 text-pink-500" /> Sauvegarde et prise de contact simplifiées pour les usagers.</div>
             </div>
+            {error ? (
+              <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600">{error}</div>
+            ) : null}
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               <button
-                onClick={() => {
-                  onLogin(mode);
-                  onClose();
-                  if (mode === "institution") onOpenPublish();
-                }}
+                onClick={handleSubmit}
+                disabled={submitting}
                 className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white"
               >
-                {mode === "institution" ? <UserPlus className="h-4 w-4" /> : <LogIn className="h-4 w-4" />} Continuer
+                <LogIn className="h-4 w-4" /> {submitting ? "Validation..." : "Continuer"}
+              </button>
+              <button
+                onClick={() => {
+                  setError("");
+                  setMode((m) => (m === "login" ? "register" : "login"));
+                }}
+                className="rounded-2xl border border-[#f0dde2] bg-white px-5 py-3 text-sm font-semibold text-slate-700"
+              >
+                {mode === "login" ? "Créer un compte usager" : "Déjà inscrit ? Se connecter"}
               </button>
               <button onClick={onClose} className="rounded-2xl border border-[#f0dde2] bg-white px-5 py-3 text-sm font-semibold text-slate-700">
                 Fermer
@@ -1044,7 +1098,7 @@ function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSel
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-full border border-[#f0dde2] bg-white py-3 pl-11 pr-5 text-sm text-slate-900 outline-none"
-                placeholder="Rechercher une formation, une ville, un pays, un établissement"
+                placeholder="Que voulez-vous étudier ?"
               />
             </div>
           </div>
@@ -1146,6 +1200,7 @@ function ActionRail({ item }) {
 }
 
 function ProgramSlide({ item, onViewOffer }) {
+  const visualUrl = item?.id ? `${API_URL}/api/programs/${item.id}/visual.svg` : "";
   return (
     <article
       role="button"
@@ -1156,46 +1211,111 @@ function ProgramSlide({ item, onViewOffer }) {
       }}
       className="relative min-w-full h-full cursor-pointer overflow-hidden bg-white"
     >
-      <img src={item.image} alt={item.title} className="absolute inset-0 h-full w-full object-cover opacity-20" />
-      <div className={`absolute inset-0 bg-gradient-to-br ${item.accent}`} />
-      <div className="relative flex h-full flex-col justify-center px-3 pb-10 pt-20 sm:px-4 sm:pb-24 sm:pt-24 lg:px-8 lg:pb-12">
-        <div className="w-full max-w-none rounded-[26px] border border-white/80 bg-white/85 p-4 shadow-xl shadow-pink-50 backdrop-blur sm:max-w-xl sm:p-6">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-[#fff3f5] px-3 py-1 text-xs text-slate-700">{item.degree}</span>
-            <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs text-slate-700">{item.mode}</span>
-          </div>
-          <div className="mt-4 flex items-start gap-3">
-            <img
-              src={item.logo || GENERIC_LOGO}
-              alt={item.institution}
-              className="h-11 w-11 rounded-xl bg-white p-1 object-contain shadow-sm"
-              onError={(e) => {
-                e.currentTarget.onerror = null;
-                e.currentTarget.src = GENERIC_LOGO;
-              }}
-            />
-            <h1 className="text-xl font-semibold leading-tight text-slate-900 sm:text-2xl lg:text-4xl">{item.title}</h1>
-          </div>
-          <p className="mt-3 text-sm leading-6 text-slate-600 sm:leading-7">{item.summary}</p>
+      {/* Visual generated automatically by backend (per formation). */}
+      <img
+        src={visualUrl}
+        alt={item.title}
+        className="absolute inset-0 h-full w-full object-cover"
+        onError={(e) => {
+          // Hard fallback if API visual isn't reachable yet
+          e.currentTarget.onerror = null;
+          e.currentTarget.src = item.image || GENERIC_PROGRAM_IMAGE;
+        }}
+      />
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-2xl bg-[#fff8fa] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Établissement</div>
-              <div className="mt-2 text-sm font-semibold text-slate-900">{item.institution}</div>
-              <div className="mt-1 flex items-center gap-1 text-xs text-slate-500"><MapPin className="h-3.5 w-3.5" /> {item.city}</div>
-            </div>
-            <div className="rounded-2xl bg-[#fff8fa] p-4">
-              <div className="text-xs uppercase tracking-[0.2em] text-slate-400">Infos clés</div>
-              <div className="mt-2 text-sm text-slate-700">{item.duration}</div>
-              <div className="mt-1 text-sm text-slate-700">{item.tuition}</div>
-            </div>
-          </div>
-        </div>
-
+      {/* Keep real logo on top (SVG visual doesn't embed remote logos to avoid CORS). */}
+      <div className="absolute left-4 top-28 z-20 rounded-2xl bg-white/90 p-2 shadow-lg">
+        <img
+          src={item.logo || GENERIC_LOGO}
+          alt={item.institution}
+          className="h-14 w-14 object-contain"
+          onError={(e) => {
+            e.currentTarget.onerror = null;
+            e.currentTarget.src = GENERIC_LOGO;
+          }}
+        />
       </div>
 
       <ActionRail item={item} />
     </article>
+  );
+}
+
+function HomeScreen({ onExplore, onReference }) {
+  return (
+    <div className="min-h-screen bg-white pb-28">
+      <WelcomeHero onExplore={onExplore} onReference={onReference} />
+    </div>
+  );
+}
+
+function FavoritesScreen({ favorites, onViewOffer }) {
+  return (
+    <div className="min-h-screen bg-white px-4 pb-28 pt-24 lg:px-6">
+      <div className="mx-auto max-w-6xl">
+        <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
+          <div className="text-lg font-semibold text-slate-900">Favoris</div>
+          <div className="mt-1 text-sm text-slate-600">Retrouvez rapidement les formations que vous avez enregistrées.</div>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            {favorites.map((item) => (
+              <button
+                key={`fav-${item.id}`}
+                onClick={() => onViewOffer?.(item)}
+                className="text-left overflow-hidden rounded-[24px] border border-[#f1dde3] bg-white hover:bg-[#fff9fa]"
+              >
+                <div className="relative h-44">
+                  <img
+                    src={item.image || GENERIC_PROGRAM_IMAGE}
+                    alt={item.title}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null;
+                      e.currentTarget.src = GENERIC_PROGRAM_IMAGE;
+                    }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 text-sm font-semibold text-white">{item.title}</div>
+                </div>
+                <div className="p-4">
+                  <div className="text-sm font-semibold text-slate-900">{item.institution}</div>
+                  <div className="mt-1 text-xs text-slate-500">{item.city} — {item.country}</div>
+                </div>
+              </button>
+            ))}
+            {favorites.length === 0 && (
+              <div className="text-sm text-slate-500">Aucun favori pour le moment.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ContactScreen() {
+  const [form, setForm] = useState({ nom: "", email: "", message: "" });
+  const wa = `https://wa.me/${WHATSAPP_FALLBACK.replace(/\D/g, "")}`;
+  return (
+    <div className="min-h-screen bg-white px-4 pb-28 pt-24 lg:px-6">
+      <div className="mx-auto max-w-3xl rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
+        <div className="text-lg font-semibold text-slate-900">Contact</div>
+        <div className="mt-1 text-sm text-slate-600">Une question ? Besoin d'aide pour choisir ?</div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <a className="rounded-2xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white" href={wa} target="_blank" rel="noreferrer">
+            WhatsApp
+          </a>
+          <a className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-2 text-sm font-semibold text-slate-700" href="mailto:contact@studysia.com">
+            Email
+          </a>
+        </div>
+        <div className="mt-6 grid gap-3">
+          <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Nom" value={form.nom} onChange={(e) => setForm({ ...form, nom: e.target.value })} />
+          <input className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" placeholder="Email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+          <textarea className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" rows={4} placeholder="Message" value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
+        </div>
+        <div className="mt-4 text-xs text-slate-500">Ce formulaire est informatif; pour une réponse rapide, privilégiez WhatsApp.</div>
+      </div>
+    </div>
   );
 }
 function InstitutionSlide({ item }) {
@@ -1264,7 +1384,7 @@ function InstitutionSlide({ item }) {
 function FeedSection({ item, onViewOffer }) {
   return (
     <section className="snap-start">
-      <div className="h-[calc(100svh-120px)] sm:h-screen">
+      <div className="h-screen">
         <ProgramSlide item={item} onViewOffer={onViewOffer} />
       </div>
     </section>
@@ -1307,12 +1427,36 @@ function SearchScreen({ searchQuery, setSearchQuery, selectedFilter, setSelected
               {results.map((item) => (
                 <div key={item.id} className="overflow-hidden rounded-[24px] border border-[#f1dde3] bg-white">
                   <div className="relative h-52">
-                    <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
+                    <img
+                      src={item.image || GENERIC_PROGRAM_IMAGE}
+                      alt={item.title}
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = GENERIC_PROGRAM_IMAGE;
+                      }}
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />
                     <div className="absolute bottom-4 left-4 right-4 text-sm font-semibold text-white">{item.title}</div>
+                    {Number(item.homologue) === 1 && (
+                      <div className="absolute left-3 top-3 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                        Homologué
+                      </div>
+                    )}
                   </div>
                   <div className="p-4">
-                    <div className="text-sm font-semibold text-slate-900">{item.institution}</div>
+                    <div className="flex items-center gap-2">
+                      <img
+                        src={item.logo || GENERIC_LOGO}
+                        alt={item.institution}
+                        className="h-7 w-7 rounded-lg bg-white p-0.5 object-contain ring-1 ring-[#f1dde3]"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = GENERIC_LOGO;
+                        }}
+                      />
+                      <div className="text-sm font-semibold text-slate-900">{item.institution}</div>
+                    </div>
                     <div className="mt-1 text-xs text-slate-500">{item.city} • {item.degree}</div>
                     <div className="mt-3 flex items-center justify-between gap-3">
                       <span className="text-sm text-slate-700">{item.tuition}</span>
@@ -1385,7 +1529,15 @@ function OfferDetailScreen({ item, onBack, onOpenInstitution, programsData }) {
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="overflow-hidden rounded-[30px] border border-[#f1dde3] bg-white shadow-lg shadow-pink-50">
           <div className="relative h-64">
-            <img src={item.image} alt={item.title} className="h-full w-full object-cover" />
+            <img
+              src={item.image || GENERIC_PROGRAM_IMAGE}
+              alt={item.title}
+              className="h-full w-full object-cover"
+              onError={(e) => {
+                e.currentTarget.onerror = null;
+                e.currentTarget.src = GENERIC_PROGRAM_IMAGE;
+              }}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
             <div className="absolute bottom-6 left-6 right-6">
               <div className="text-sm font-semibold text-white/90">{item.institution}</div>
@@ -1397,6 +1549,9 @@ function OfferDetailScreen({ item, onBack, onOpenInstitution, programsData }) {
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-[#fff3f5] px-3 py-1 text-xs text-slate-700">{item.degree}</span>
               <span className="rounded-full bg-[#fff7ed] px-3 py-1 text-xs text-slate-700">{item.mode}</span>
+              {Number(item.homologue) === 1 && (
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">Homologué</span>
+              )}
             </div>
 
             <div className="mt-4 text-sm leading-7 text-slate-600">{item.summary}</div>
@@ -1493,6 +1648,11 @@ function InstitutionDetailScreen({ item, onBack, onViewOffer, programsData }) {
               </div>
               <div>
                 <div className="text-xl font-semibold text-slate-900">{item.institution}</div>
+                {Number(item.homologue) === 1 && (
+                  <div className="mt-1 inline-flex items-center rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                    Homologué
+                  </div>
+                )}
                 <div className="mt-1 text-sm text-slate-500">{item.city}, {item.country}</div>
                 <div className="mt-1 text-sm text-slate-500">{contact}</div>
               </div>
@@ -1606,6 +1766,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     share_whatsapp: "",
     share_facebook: "",
     share_tiktok: "",
+    homologue: 0,
     active_etablissement: 1,
   });
   const [programForm, setProgramForm] = useState({
@@ -1629,6 +1790,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
   const [galleryFiles, setGalleryFiles] = useState([]);
   const [galleryTargetInstitutionId, setGalleryTargetInstitutionId] = useState("");
   const [galleryItems, setGalleryItems] = useState([]);
+  const [programsInstitutionFilter, setProgramsInstitutionFilter] = useState("");
   const [adminSection, setAdminSection] = useState("dashboard");
 
   const loadInstitutions = async () => {
@@ -1638,6 +1800,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     });
     const data = await res.json();
     setInstitutions(data);
+    return Array.isArray(data) ? data : [];
   };
 
   const loadPrograms = async () => {
@@ -1730,8 +1893,20 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       },
       body: JSON.stringify({ ...form, name, city, country }),
     });
-    const data = await res.json();
+    const data = await res.json().catch(() => ({}));
     if (res.ok) {
+      if (editingInstitutionId && data?.ok === false) {
+        setStatus("Aucune modification appliquée sur l’établissement.");
+        return;
+      }
+      const expectedHomologue = Number(form.homologue) === 1 ? 1 : 0;
+      const persistedHomologue = Number(data?.institution?.homologue);
+      if (editingInstitutionId && Number.isFinite(persistedHomologue) && persistedHomologue !== expectedHomologue) {
+        setStatus("Mise à jour non appliquée sur le statut Homologué.");
+        await loadInstitutions();
+        return;
+      }
+      await loadInstitutions();
       setStatus(editingInstitutionId ? "Établissement mis à jour" : "Établissement créé");
       setEditingInstitutionId(null);
       setForm({
@@ -1745,9 +1920,9 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         share_whatsapp: "",
         share_facebook: "",
         share_tiktok: "",
+        homologue: 0,
         active_etablissement: 1,
       });
-      await loadInstitutions();
       if (!programForm.institution_id && data.id) setProgramForm({ ...programForm, institution_id: data.id });
     } else {
       setStatus(data.error || "Erreur");
@@ -2005,6 +2180,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       share_whatsapp: inst.share_whatsapp || "",
       share_facebook: inst.share_facebook || "",
       share_tiktok: inst.share_tiktok || "",
+      homologue: Number(inst.homologue ?? 0),
       active_etablissement: Number(inst.active_etablissement ?? 1),
     });
     setGalleryTargetInstitutionId(String(inst.id));
@@ -2064,6 +2240,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
       share_whatsapp: inst.share_whatsapp || "",
       share_facebook: inst.share_facebook || "",
       share_tiktok: inst.share_tiktok || "",
+      homologue: Number(inst.homologue ?? 0),
       active_etablissement: Number(inst.active_etablissement) ? 0 : 1,
     };
     const res = await fetch(`${apiUrl}/api/institutions/${inst.id}`, {
@@ -2079,7 +2256,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     if (res.ok) await loadInstitutions();
   };
 
-  const toggleProgramActive = async (p) => {
+  const setProgramActive = async (p, nextActive) => {
     const payload = {
       institution_id: p.institution_id,
       field: p.field || "",
@@ -2098,7 +2275,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         try { return p.outcomes ? JSON.parse(p.outcomes) : []; } catch { return []; }
       })(),
       image_url: p.image_url || "",
-      active_formation: Number(p.active_formation) ? 0 : 1,
+      active_formation: Number(nextActive) ? 1 : 0,
     };
     const res = await fetch(`${apiUrl}/api/programs/${p.id}`, {
       method: "PUT",
@@ -2110,7 +2287,33 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     });
     const data = await res.json();
     setStatus(res.ok ? "Visibilite formation mise a jour" : data.error || "Erreur");
-    if (res.ok) await loadPrograms();
+    return res.ok;
+  };
+
+  const toggleProgramActive = async (p) => {
+    const ok = await setProgramActive(p, Number(p.active_formation) ? 0 : 1);
+    if (ok) await loadPrograms();
+  };
+
+  const setProgramsByInstitutionActive = async (nextActive) => {
+    if (!programsInstitutionFilter) {
+      setStatus("Selectionnez d'abord un etablissement.");
+      return;
+    }
+    const targetInstitutionId = Number(programsInstitutionFilter);
+    const targets = programsList.filter((p) => Number(p.institution_id) === targetInstitutionId);
+    if (!targets.length) {
+      setStatus("Aucune formation pour cet etablissement.");
+      return;
+    }
+    setStatus(nextActive ? "Activation des formations..." : "Desactivation des formations...");
+    let okCount = 0;
+    for (const p of targets) {
+      const ok = await setProgramActive(p, nextActive ? 1 : 0);
+      if (ok) okCount += 1;
+    }
+    await loadPrograms();
+    setStatus(`${okCount}/${targets.length} formations mises a jour.`);
   };
 
   const exportCSV = () => {
@@ -2271,6 +2474,12 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
     await loadInstitutions();
   };
 
+  const filteredProgramsForAdmin = programsInstitutionFilter
+    ? programsList.filter((p) => Number(p.institution_id) === Number(programsInstitutionFilter))
+    : programsList;
+  const statusIsError = /erreur|failed|invalide|invalid|required|obligatoire|introuvable/i.test(status || "");
+  const statusIsSuccess = /cree|créé|mise a jour|mis a jour|modifie|supprime|termine|terminé|uploadée|connecté|visible|masqu/i.test(status || "");
+
   if (!token) {
     return (
       <div className="min-h-screen bg-white px-4 pb-28 pt-24 lg:px-6">
@@ -2290,20 +2499,6 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
   return (
     <div className="min-h-screen bg-white px-4 pb-28 pt-24 lg:px-6">
       <div className="mx-auto max-w-5xl space-y-6">
-        <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
-          <div className="text-lg font-semibold text-slate-900">Admin - Données</div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button onClick={seedSample} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Seed données démo</button>
-            <button onClick={exportCSV} className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">Exporter CSV</button>
-            <label className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">
-              Importer CSV
-              <input type="file" className="hidden" accept=".csv" onChange={(e) => importCSV(e.target.files?.[0])} />
-            </label>
-            {status && <div className="text-sm text-slate-600">{status}</div>}
-          </div>
-          <div className="mt-4 text-sm text-slate-600">Institutions existantes: {institutions.length}</div>
-        </div>
-
         <div className="rounded-[24px] border border-[#f1dde3] bg-white p-3 shadow-sm">
           <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
             <button onClick={() => setAdminSection("dashboard")} className={`rounded-xl px-3 py-2 text-sm font-medium ${adminSection === "dashboard" ? "bg-slate-900 text-white" : "bg-[#fff4f6] text-slate-700"}`}>Vue</button>
@@ -2312,6 +2507,19 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
             <button onClick={() => setAdminSection("programs")} className={`rounded-xl px-3 py-2 text-sm font-medium ${adminSection === "programs" ? "bg-slate-900 text-white" : "bg-[#fff4f6] text-slate-700"}`}>Formations</button>
           </div>
         </div>
+        {status && (
+          <div
+            className={`rounded-2xl border px-4 py-3 text-sm ${
+              statusIsError
+                ? "border-rose-200 bg-rose-50 text-rose-700"
+                : statusIsSuccess
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                  : "border-[#f1dde3] bg-[#fff9fa] text-slate-700"
+            }`}
+          >
+            {status}
+          </div>
+        )}
 
         {adminSection === "dashboard" && (
           <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
@@ -2322,7 +2530,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
               <div className="rounded-2xl bg-[#fff9fa] p-4 text-sm text-slate-700">Formations: {programsList.length}</div>
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
-              <button onClick={() => setAdminSection("accounts")} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Creer un compte</button>
+              <button onClick={() => setAdminSection("accounts")} className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white">Valider un compte</button>
               <button onClick={() => setAdminSection("institutions")} className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">Ajouter un etablissement</button>
               <button onClick={() => setAdminSection("programs")} className="rounded-2xl border border-[#f0dde2] px-4 py-2 text-sm">Ajouter une formation</button>
             </div>
@@ -2376,7 +2584,7 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
           </div>
           <div className="mt-4 flex flex-wrap gap-2">
             <button onClick={editingAccountId ? updateAccount : createAccount} className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">
-              {editingAccountId ? "Enregistrer" : "Creer compte"}
+              {editingAccountId ? "Valider" : "Valider"}
             </button>
             {editingAccountId && (
               <button
@@ -2390,7 +2598,6 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
               </button>
             )}
           </div>
-          {status && <div className="mt-3 text-sm text-slate-600">{status}</div>}
           {createdAccounts.length > 0 && (
             <div className="mt-4 space-y-2">
               {createdAccounts.map((u) => (
@@ -2459,6 +2666,14 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
             <label className="inline-flex items-center gap-2 rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm">
               <input
                 type="checkbox"
+                checked={Number(form.homologue) === 1}
+                onChange={(e) => setForm({ ...form, homologue: e.target.checked ? 1 : 0 })}
+              />
+              Homologué
+            </label>
+            <label className="inline-flex items-center gap-2 rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm">
+              <input
+                type="checkbox"
                 checked={Number(form.active_etablissement) === 1}
                 onChange={(e) => setForm({ ...form, active_etablissement: e.target.checked ? 1 : 0 })}
               />
@@ -2502,12 +2717,15 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
               </div>
             )}
           </div>
-          <button onClick={createInstitution} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Créer</button>
+          <button onClick={createInstitution} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Valider</button>
           <div className="mt-5 space-y-2">
             {institutions.map((i) => (
               <div key={i.id} className="flex items-center justify-between rounded-2xl border border-[#f1dde3] bg-[#fff9fa] px-4 py-3 text-sm">
                 <div className="flex items-center gap-3">
                   <span>{i.name}</span>
+                  <span className={`rounded-full px-2 py-1 text-xs ${Number(i.homologue) === 1 ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                    {Number(i.homologue) === 1 ? "Homologué" : "Non homologué"}
+                  </span>
                   <span className={`rounded-full px-2 py-1 text-xs ${Number(i.active_etablissement) === 1 ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-600"}`}>
                     {Number(i.active_etablissement) === 1 ? "Actif" : "Masqué"}
                   </span>
@@ -2529,6 +2747,28 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
         {adminSection === "programs" && (
         <div className="rounded-[30px] border border-[#f1dde3] bg-white p-6 shadow-lg shadow-pink-50">
           <div className="text-lg font-semibold text-slate-900">Créer une formation</div>
+          <div className="mt-4 rounded-2xl border border-[#f0dde2] bg-[#fff9fa] p-4">
+            <div className="text-sm font-semibold text-slate-900">Gestion par établissement</div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <select
+                className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-3 text-sm"
+                value={programsInstitutionFilter}
+                onChange={(e) => setProgramsInstitutionFilter(e.target.value)}
+              >
+                <option value="">Tous les établissements</option>
+                {institutions.map((i) => (
+                  <option key={`prog-filter-${i.id}`} value={i.id}>{i.name}</option>
+                ))}
+              </select>
+              <button onClick={() => setProgramsByInstitutionActive(0)} className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-2 text-sm text-slate-700">
+                Masquer toutes
+              </button>
+              <button onClick={() => setProgramsByInstitutionActive(1)} className="rounded-2xl border border-[#f0dde2] bg-white px-4 py-2 text-sm text-slate-700">
+                Afficher toutes
+              </button>
+              <span className="text-xs text-slate-500">{filteredProgramsForAdmin.length} formation(s)</span>
+            </div>
+          </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <select className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm" value={programForm.institution_id} onChange={(e) => setProgramForm({ ...programForm, institution_id: e.target.value })}>
               <option value="">Établissement</option>
@@ -2564,9 +2804,9 @@ function AdminScreen({ apiUrl, token, onLogin, programsSample }) {
             </label>
             {uploading && <span className="text-sm text-slate-500">Upload...</span>}
           </div>
-          <button onClick={createProgram} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Créer</button>
+          <button onClick={createProgram} className="mt-4 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Valider</button>
           <div className="mt-5 space-y-2">
-            {programsList.map((p) => (
+            {filteredProgramsForAdmin.map((p) => (
               <div key={p.id} className="flex items-center justify-between rounded-2xl border border-[#f1dde3] bg-[#fff9fa] px-4 py-3 text-sm">
                 <div className="flex items-center gap-3">
                   <span>{p.title}</span>
@@ -2630,7 +2870,56 @@ function InboxScreen({ currentUser, onOpenAuth }) {
   );
 }
 
-function ProfileScreen({ currentUser, onOpenAuth, onPublishRequest, programsData }) {
+function ProfileScreen({ currentUser, onOpenAuth, onPublishRequest, programsData, apiUrl, authToken, onLogout }) {
+  const [pwdCurrent, setPwdCurrent] = useState("");
+  const [pwdNext, setPwdNext] = useState("");
+  const [pwdConfirm, setPwdConfirm] = useState("");
+  const [pwdStatus, setPwdStatus] = useState("");
+  const [pwdLoading, setPwdLoading] = useState(false);
+
+  const changePassword = async () => {
+    if (!apiUrl || !authToken) {
+      setPwdStatus("Session invalide. Reconnectez-vous.");
+      return;
+    }
+    if (!pwdCurrent || !pwdNext || !pwdConfirm) {
+      setPwdStatus("Veuillez remplir tous les champs.");
+      return;
+    }
+    if (pwdNext !== pwdConfirm) {
+      setPwdStatus("La confirmation ne correspond pas.");
+      return;
+    }
+    if (pwdNext.length < 6) {
+      setPwdStatus("Le nouveau mot de passe doit contenir au moins 6 caractères.");
+      return;
+    }
+    setPwdLoading(true);
+    setPwdStatus("Mise à jour...");
+    try {
+      const res = await fetch(`${apiUrl}/api/auth/change-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: JSON.stringify({ current_password: pwdCurrent, new_password: pwdNext }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setPwdStatus(data?.error || "Erreur de mise à jour.");
+      } else {
+        setPwdStatus("Mot de passe mis à jour.");
+        setPwdCurrent("");
+        setPwdNext("");
+        setPwdConfirm("");
+      }
+    } catch (e) {
+      setPwdStatus(e?.message || "Erreur réseau.");
+    } finally {
+      setPwdLoading(false);
+    }
+  };
   if (!currentUser) {
     return (
       <div className="min-h-screen bg-white px-4 pb-28 pt-24 lg:px-6">
@@ -2642,7 +2931,6 @@ function ProfileScreen({ currentUser, onOpenAuth, onPublishRequest, programsData
               </div>
               <div className="mt-5 text-3xl font-semibold text-slate-900">Un compte permet d’aller plus loin.</div>
               <p className="mt-4 max-w-xl text-sm leading-7 text-slate-600">Créer un compte pour sauvegarder, contacter, comparer ou publier si vous êtes un établissement.</p>
-              <button onClick={onOpenAuth} className="mt-6 rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">Créer ou connecter un compte</button>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
               {[
@@ -2701,6 +2989,49 @@ function ProfileScreen({ currentUser, onOpenAuth, onPublishRequest, programsData
               </div>
             ))}
           </div>
+
+          <div className="mt-6 rounded-[24px] border border-[#f1dde3] bg-[#fff9fa] p-4">
+            <div className="text-sm font-semibold text-slate-900">Modifier le mot de passe</div>
+            <div className="mt-3 grid gap-3 md:grid-cols-3">
+              <input
+                className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm"
+                placeholder="Mot de passe actuel"
+                type="password"
+                value={pwdCurrent}
+                onChange={(e) => setPwdCurrent(e.target.value)}
+              />
+              <input
+                className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm"
+                placeholder="Nouveau mot de passe"
+                type="password"
+                value={pwdNext}
+                onChange={(e) => setPwdNext(e.target.value)}
+              />
+              <input
+                className="rounded-2xl border border-[#f0dde2] px-4 py-3 text-sm"
+                placeholder="Confirmer le nouveau"
+                type="password"
+                value={pwdConfirm}
+                onChange={(e) => setPwdConfirm(e.target.value)}
+              />
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button
+                onClick={changePassword}
+                disabled={pwdLoading}
+                className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {pwdLoading ? "Validation..." : "Valider"}
+              </button>
+              <button
+                onClick={onLogout}
+                className="rounded-2xl border border-[#f0dde2] bg-white px-5 py-3 text-sm font-semibold text-slate-700"
+              >
+                Déconnexion
+              </button>
+            </div>
+            {pwdStatus && <div className="mt-2 text-sm text-slate-600">{pwdStatus}</div>}
+          </div>
         </div>
       </div>
     </div>
@@ -2709,11 +3040,11 @@ function ProfileScreen({ currentUser, onOpenAuth, onPublishRequest, programsData
 
 function BottomNav({ activeTab, setActiveTab, onPublishRequest, currentUser, onOpenAuth }) {
   const items = [
-    ["feed", GraduationCap, "Feed"],
+    ["home", GraduationCap, "Accueil"],
+    ["explore", Sparkles, "Explorer"],
     ["search", Search, "Recherche"],
-    ["publish", Plus, currentUser?.role === "institution" ? "Publier" : "Accès"],
-    ["inbox", Send, "Messages"],
-    ["profile", User, "Profil"],
+    ["favorites", Bookmark, "Favoris"],
+    ["contact", Send, "Contact"],
   ];
 
   return (
@@ -2723,11 +3054,7 @@ function BottomNav({ activeTab, setActiveTab, onPublishRequest, currentUser, onO
           <button
             key={key}
             onClick={() => {
-              if (key === "publish") {
-                currentUser?.role === "institution" ? onPublishRequest() : onOpenAuth();
-              } else {
-                setActiveTab(key);
-              }
+              setActiveTab(key);
             }}
             className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 ${activeTab === key ? "bg-[#fff4f6] text-slate-900" : "text-slate-500 hover:bg-[#fff8fa] hover:text-slate-900"}`}
           >
@@ -2740,21 +3067,125 @@ function BottomNav({ activeTab, setActiveTab, onPublishRequest, currentUser, onO
   );
 }
 
+function WelcomeHero({ onExplore, onReference }) {
+  return (
+    <section className="px-4 pb-4 pt-24 lg:px-6">
+      <div className="mx-auto max-w-6xl rounded-[28px] border border-[#f1dde3] bg-[linear-gradient(160deg,#fff5f8,#fffaf2)] p-6 shadow-lg shadow-pink-50 lg:p-8">
+        <div className="text-xs uppercase tracking-[0.2em] text-slate-500">STUDYSIA</div>
+        <h1 className="mt-2 text-2xl font-semibold text-slate-900 lg:text-4xl">
+          Votre cartographie des offres de formation en Afrique
+        </h1>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 lg:text-base">
+          Trouvez une école, une université, une filière ou une formation en quelques secondes.
+        </p>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+          Studysia aide les étudiants, les parents et les établissements à se rencontrer.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <button onClick={onExplore} className="rounded-2xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">
+            Explorer les formations
+          </button>
+          <button onClick={onReference} className="rounded-2xl border border-[#f0dde2] bg-white px-5 py-3 text-sm font-semibold text-slate-700">
+            Référencer mon établissement
+          </button>
+        </div>
+        <div className="mt-4 text-xs text-slate-500">
+          Recherche rapide: Gestion | Droit | Informatique | Santé | Communication | Ingénierie | BTS | Licence | Master
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HelpWidget() {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    nom: "",
+    niveau: "",
+    filiere: "",
+    ville: "",
+    budget: "",
+    whatsapp: "",
+  });
+  const text = encodeURIComponent(
+    `Besoin d'aide Studysia\nNom: ${form.nom}\nNiveau actuel: ${form.niveau}\nFilière recherchée: ${form.filiere}\nVille souhaitée: ${form.ville}\nBudget approximatif: ${form.budget}\nTéléphone WhatsApp: ${form.whatsapp}`
+  );
+  const wa = `https://wa.me/${WHATSAPP_FALLBACK.replace(/\D/g, "")}?text=${text}`;
+  return (
+    <div className="fixed bottom-20 right-4 z-50 sm:bottom-24">
+      <button onClick={() => setOpen((v) => !v)} className="rounded-full bg-slate-900 px-4 py-3 text-xs font-semibold text-white shadow-xl">
+        Besoin d’aide pour choisir ?
+      </button>
+      {open && (
+        <div className="mt-2 w-[290px] rounded-2xl border border-[#f1dde3] bg-white p-3 shadow-2xl">
+          <div className="text-sm font-semibold text-slate-900">Orientation rapide</div>
+          <div className="mt-2 grid gap-2">
+            {[
+              ["nom", "Nom"],
+              ["niveau", "Niveau actuel"],
+              ["filiere", "Filière recherchée"],
+              ["ville", "Ville souhaitée"],
+              ["budget", "Budget approximatif"],
+              ["whatsapp", "Téléphone WhatsApp"],
+            ].map(([k, ph]) => (
+              <input key={k} value={form[k]} onChange={(e) => setForm({ ...form, [k]: e.target.value })} placeholder={ph} className="rounded-xl border border-[#f0dde2] px-3 py-2 text-xs" />
+            ))}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <a href={wa} target="_blank" rel="noreferrer" className="flex-1 rounded-xl bg-emerald-600 px-3 py-2 text-center text-xs font-semibold text-white">WhatsApp</a>
+            <button onClick={() => setOpen(false)} className="rounded-xl border border-[#f0dde2] px-3 py-2 text-xs">Fermer</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function GuidancePrompt({ open, onClose, onAssist, onExplore }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[90] bg-black/35">
+      <div className="mx-auto mt-24 max-w-md rounded-2xl border border-[#f1dde3] bg-white p-5 shadow-2xl">
+        <div className="text-sm font-semibold text-slate-900">
+          Vous cherchez une formation pour vous ou pour votre enfant ?
+        </div>
+        <div className="mt-1 text-xs text-slate-600">Studysia peut vous orienter gratuitement.</div>
+        <div className="mt-4 flex gap-2">
+          <button onClick={onAssist} className="rounded-xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white">Oui, m’orienter</button>
+          <button onClick={onExplore} className="rounded-xl border border-[#f0dde2] px-4 py-2 text-xs">Je veux explorer seul</button>
+          <button onClick={onClose} className="rounded-xl border border-[#f0dde2] px-4 py-2 text-xs">Fermer</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AfrikArtsMarketplacePrototype() {
-  const [activeTab, setActiveTab] = useState("feed");
-  const [lastTab, setLastTab] = useState("feed");
+  const [activeTab, setActiveTab] = useState("home");
+  const [lastTab, setLastTab] = useState("explore");
   const [selectedFilter, setSelectedFilter] = useState("Tous");
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [authOpen, setAuthOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [authToken, setAuthToken] = useState(localStorage.getItem("studysia_user_token") || "");
   const [selectedOffer, setSelectedOffer] = useState(null);
   const [selectedInstitution, setSelectedInstitution] = useState(null);
   const [adminToken, setAdminToken] = useState(localStorage.getItem("studysia_admin_token") || "");
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [soundVolume, setSoundVolume] = useState(0.35);
   const [programsData, setProgramsData] = useState(programs.map(fixProgram));
+  const [showGuidancePrompt, setShowGuidancePrompt] = useState(false);
+  const [favoriteIds, setFavoriteIds] = useState(() => {
+    try {
+      const raw = localStorage.getItem("studysia_favorites") || "[]";
+      const arr = JSON.parse(raw);
+      return new Set((Array.isArray(arr) ? arr : []).map((v) => Number(v)).filter((v) => Number.isFinite(v)));
+    } catch {
+      return new Set();
+    }
+  });
   const audioRef = React.useRef(null);
   const selectedTrack = useMemo(() => {
     if (!AUDIO_TRACKS.length) return null;
@@ -2769,13 +3200,63 @@ export default function AfrikArtsMarketplacePrototype() {
     );
   }, [selectedFilter, programsData]);
 
-  const handleLogin = (roleMode) => {
-    setCurrentUser({
-      name: roleMode === "institution" ? "Université Démo Afrique" : "Usager Démo",
-      handle: roleMode === "institution" ? "@univdemo" : "@candidatdemo",
-      city: "Libreville, Gabon",
-      role: roleMode,
+  const handleLogin = async ({ email, password }) => {
+    if (!API_URL) throw new Error("API indisponible.");
+    const res = await fetch(`${API_URL}/api/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
     });
+    let data = {};
+    try {
+      data = await res.json();
+    } catch {
+      data = {};
+    }
+    if (!res.ok || !data?.user || !data?.token) {
+      throw new Error(data?.error || "Identifiants invalides.");
+    }
+
+    const user = data.user;
+    const nextUser = {
+      name: user.name || "Compte",
+      handle: user.role === "institution" ? "@etablissement" : "@usager",
+      city: "Gabon",
+      role: user.role,
+      institution_id: user.institution_id || null,
+      institution_name: user.institution_name || "",
+      email: user.email || email,
+    };
+    setCurrentUser(nextUser);
+    setAuthToken(data.token);
+    localStorage.setItem("studysia_user_token", data.token);
+
+    if (user.role === "admin") {
+      setAdminToken(data.token);
+      localStorage.setItem("studysia_admin_token", data.token);
+      setActiveTab("admin");
+    } else if (user.role === "institution") {
+      setActiveTab("profile");
+    } else {
+      setActiveTab("profile");
+    }
+
+    setAuthOpen(false);
+    return true;
+  };
+
+  const handleRegisterUser = async ({ name, email, password }) => {
+    if (!API_URL) throw new Error("API indisponible.");
+    const res = await fetch(`${API_URL}/api/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password, role: "user" }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data?.error || "Inscription impossible.");
+    }
+    return handleLogin({ email, password });
   };
 
   const handlePublishRequest = () => {
@@ -2833,6 +3314,12 @@ export default function AfrikArtsMarketplacePrototype() {
   }, []);
 
   React.useEffect(() => {
+    if (currentUser) return;
+    const t = setTimeout(() => setShowGuidancePrompt(true), 10000);
+    return () => clearTimeout(t);
+  }, [currentUser]);
+
+  React.useEffect(() => {
     localStorage.setItem("studysia_sound_enabled", soundEnabled ? "true" : "false");
     if (!soundEnabled) {
       stopSound();
@@ -2858,6 +3345,24 @@ export default function AfrikArtsMarketplacePrototype() {
     setAdminToken(token);
     localStorage.setItem("studysia_admin_token", token);
     setActiveTab("admin");
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setAuthToken("");
+    setAdminToken("");
+    localStorage.removeItem("studysia_user_token");
+    localStorage.removeItem("studysia_admin_token");
+    setActiveTab("home");
+  };
+
+  const handleOpenAuthOrProfile = () => {
+    if (currentUser) {
+      setActiveTab("profile");
+      setAuthOpen(false);
+      return;
+    }
+    setAuthOpen(true);
   };
 
   const handleOpenInstitution = (item) => {
@@ -2916,6 +3421,7 @@ export default function AfrikArtsMarketplacePrototype() {
             contact: i.contact,
             logo: i.logo_url,
             address: i.address,
+            homologue: Number(i.homologue || 0),
             gallery: [],
           };
         });
@@ -2928,7 +3434,7 @@ export default function AfrikArtsMarketplacePrototype() {
   }, []);
 
   return (
-    <div className="bg-white text-slate-900">
+    <div className="brand-vivid bg-white text-slate-900">
       <TopBar
         activeTab={activeTab}
         searchQuery={searchQuery}
@@ -2941,17 +3447,24 @@ export default function AfrikArtsMarketplacePrototype() {
         soundVolume={soundVolume}
         onVolumeChange={setSoundVolume}
         onToggleSound={handleToggleSound}
-        onOpenAuth={() => setAuthOpen(true)}
+        onOpenAuth={handleOpenAuthOrProfile}
         onPublishRequest={handlePublishRequest}
         onGoHome={() => {
-          setActiveTab("feed");
+          setActiveTab("home");
           setFilterOpen(false);
         }}
         currentUser={currentUser}
       />
 
-      {activeTab === "feed" && (
-        <main className="h-[calc(100svh-120px)] overflow-y-auto snap-y snap-mandatory scroll-smooth sm:h-screen">
+      {activeTab === "home" && (
+        <HomeScreen
+          onExplore={() => setActiveTab("explore")}
+          onReference={() => setAuthOpen(true)}
+        />
+      )}
+
+      {activeTab === "explore" && (
+        <main className="h-auto min-h-0 overflow-y-auto snap-y snap-mandatory scroll-smooth sm:h-screen">
           {filteredPrograms.map((item) => (
             <FeedSection key={item.id} item={item} onViewOffer={handleViewOffer} />
           ))}
@@ -2989,34 +3502,41 @@ export default function AfrikArtsMarketplacePrototype() {
         <AdminScreen apiUrl={API_URL} token={adminToken} onLogin={handleAdminLogin} programsSample={programs} />
       )}
 
-      {activeTab === "inbox" && <InboxScreen currentUser={currentUser} onOpenAuth={() => setAuthOpen(true)} />}
-      {activeTab === "profile" && (
-        <ProfileScreen
-          currentUser={currentUser}
-          onOpenAuth={() => setAuthOpen(true)}
-          onPublishRequest={handlePublishRequest}
-          programsData={programsData}
+      {activeTab === "favorites" && (
+        <FavoritesScreen
+          favorites={programsData.filter((p) => favoriteIds.has(Number(p.id)))}
+          onViewOffer={handleViewOffer}
         />
       )}
+      {activeTab === "contact" && <ContactScreen />}
 
       <BottomNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
         onPublishRequest={handlePublishRequest}
         currentUser={currentUser}
-        onOpenAuth={() => setAuthOpen(true)}
+        onOpenAuth={handleOpenAuthOrProfile}
       />
       <AuthModal
         open={authOpen}
         onClose={() => setAuthOpen(false)}
         onLogin={handleLogin}
-        onOpenPublish={() => setPublishOpen(true)}
-        onOpenAdmin={() => {
-          setAuthOpen(false);
-          setActiveTab("admin");
-        }}
+        onRegisterUser={handleRegisterUser}
       />
       <PublishDrawer open={publishOpen} onClose={() => setPublishOpen(false)} currentUser={currentUser} />
+      <HelpWidget />
+      <GuidancePrompt
+        open={showGuidancePrompt}
+        onClose={() => setShowGuidancePrompt(false)}
+        onAssist={() => {
+          setShowGuidancePrompt(false);
+          window.open(`https://wa.me/${WHATSAPP_FALLBACK.replace(/\D/g, "")}`, "_blank");
+        }}
+        onExplore={() => {
+          setShowGuidancePrompt(false);
+          setActiveTab("explore");
+        }}
+      />
     </div>
   );
 }
