@@ -1215,9 +1215,35 @@ function ProgramSlide({ item, onViewOffer }) {
       <img
         src={visualUrl}
         alt={item.title}
-        className="absolute inset-0 h-full w-full object-cover"
+        className="absolute inset-0 h-full w-full object-cover blur-xl brightness-95 saturate-125 scale-110 hidden lg:block"
         onError={(e) => {
           // Hard fallback if API visual isn't reachable yet
+          e.currentTarget.onerror = null;
+          e.currentTarget.src = item.image || GENERIC_PROGRAM_IMAGE;
+        }}
+      />
+
+      {/* Desktop: centered 9:16 frame (prevents awkward cropping / huge whitespace). */}
+      <div className="absolute inset-0 hidden lg:flex items-center justify-center px-6 pt-24 pb-24">
+        <div className="h-full max-h-[calc(100vh-200px)] aspect-[9/16] w-auto overflow-hidden rounded-[36px] border border-white/60 bg-white/40 shadow-2xl">
+          <img
+            src={visualUrl}
+            alt={item.title}
+            className="h-full w-full object-contain"
+            onError={(e) => {
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = item.image || GENERIC_PROGRAM_IMAGE;
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Mobile/tablet: full-screen. */}
+      <img
+        src={visualUrl}
+        alt={item.title}
+        className="absolute inset-0 h-full w-full object-cover lg:hidden"
+        onError={(e) => {
           e.currentTarget.onerror = null;
           e.currentTarget.src = item.image || GENERIC_PROGRAM_IMAGE;
         }}
