@@ -58,6 +58,55 @@ function escapeXml(value) {
     .replace(/'/g, "&apos;");
 }
 
+function normalizeKey(value = "") {
+  try {
+    return String(value)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  } catch {
+    return String(value || "").toLowerCase().trim();
+  }
+}
+
+function titleToLines(title, maxLineLen = 24, maxLines = 3) {
+  const words = String(title || "").trim().split(/\s+/).filter(Boolean);
+  const lines = [];
+  let current = "";
+  for (const w of words) {
+    const next = current ? `${current} ${w}` : w;
+    if (next.length <= maxLineLen || current.length === 0) {
+      current = next;
+      continue;
+    }
+    lines.push(current);
+    current = w;
+    if (lines.length >= maxLines) break;
+  }
+  if (lines.length < maxLines && current) lines.push(current);
+  if (lines.length > maxLines) lines.length = maxLines;
+  return lines;
+}
+
+function fieldPalette(field) {
+  const key = normalizeKey(field);
+  if (key.includes("tech") || key.includes("digital") || key.includes("informat")) {
+    return { a: "#00C2FF", b: "#7C3AED", c: "#FF2AA3" };
+  }
+  if (key.includes("sant") || key.includes("med") || key.includes("pharm")) {
+    return { a: "#00E887", b: "#00C2FF", c: "#FFB703" };
+  }
+  if (key.includes("ingen") || key.includes("genie")) {
+    return { a: "#FF6A00", b: "#00C2FF", c: "#7C3AED" };
+  }
+  if (key.includes("art") || key.includes("crea") || key.includes("design")) {
+    return { a: "#FF2AA3", b: "#FF6A00", c: "#FFB703" };
+  }
+  // business/default
+  return { a: "#FF2AA3", b: "#FF6A00", c: "#FFB703" };
+}
+
 function programVisualSvg({ program, institution }) {
   const title = escapeXml(program?.title || "Formation");
   const inst = escapeXml(institution?.name || "Établissement");
@@ -67,9 +116,15 @@ function programVisualSvg({ program, institution }) {
   const mode = escapeXml(program?.mode || "");
   const tuition = escapeXml(program?.tuition || "");
   const homologue = Number(institution?.homologue || 0) === 1;
+  const duration = escapeXml(program?.duration || "");
+  const admission = escapeXml(program?.admission || "");
+  const field = escapeXml(program?.field || "");
+  const palette = fieldPalette(program?.field || "");
 
   const meta = [degree, mode].filter(Boolean).join(" · ");
+  const meta2 = [duration, field].filter(Boolean).join(" · ");
   const place = [city, country].filter(Boolean).join(" — ");
+  const titleLines = titleToLines(program?.title || "Formation", 24, 3).map(escapeXml);
 
   // 1080x1920 looks great on mobile (TikTok-style feed); we render it as a full-screen visual.
   // Keep it SVG-only (no remote <image>) to avoid CORS issues with logo URLs.
@@ -77,63 +132,85 @@ function programVisualSvg({ program, institution }) {
 <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#fff1f6"/>
-      <stop offset="0.55" stop-color="#ffffff"/>
-      <stop offset="1" stop-color="#fffaf0"/>
+      <stop offset="0" stop-color="${palette.a}"/>
+      <stop offset="0.48" stop-color="${palette.b}"/>
+      <stop offset="1" stop-color="${palette.c}"/>
     </linearGradient>
     <linearGradient id="pill" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#b7006a"/>
-      <stop offset="1" stop-color="#ff6a00"/>
+      <stop offset="0" stop-color="${palette.a}"/>
+      <stop offset="1" stop-color="${palette.c}"/>
     </linearGradient>
+    <linearGradient id="glass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.86"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0.70"/>
+    </linearGradient>
+    <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse">
+      <path d="M48 0H0V48" fill="none" stroke="#ffffff" stroke-opacity="0.14" stroke-width="1"/>
+    </pattern>
     <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#f7b1c6" flood-opacity="0.35"/>
     </filter>
+    <filter id="cardShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#000000" flood-opacity="0.18"/>
+    </filter>
   </defs>
 
+  <!-- vibrant background -->
   <rect width="1080" height="1920" fill="url(#bg)"/>
+  <rect width="1080" height="1920" fill="url(#grid)"/>
+  <circle cx="170" cy="300" r="220" fill="#ffffff" fill-opacity="0.18"/>
+  <circle cx="940" cy="520" r="260" fill="#ffffff" fill-opacity="0.14"/>
+  <circle cx="860" cy="260" r="160" fill="#000000" fill-opacity="0.10"/>
+  <circle cx="260" cy="620" r="180" fill="#000000" fill-opacity="0.08"/>
 
-  <!-- decorative bubbles echoing Studysia logo -->
-  <circle cx="145" cy="320" r="150" fill="#ff2aa3" fill-opacity="0.18"/>
-  <circle cx="255" cy="250" r="120" fill="#ff6a00" fill-opacity="0.14"/>
-  <circle cx="195" cy="455" r="105" fill="#40d36b" fill-opacity="0.12"/>
-  <circle cx="925" cy="520" r="210" fill="#ff6a00" fill-opacity="0.10"/>
-  <circle cx="845" cy="410" r="160" fill="#ff2aa3" fill-opacity="0.10"/>
-
-  <g filter="url(#softShadow)">
-    <rect x="90" y="320" width="900" height="1120" rx="56" fill="#ffffff" stroke="#f2d7e3"/>
+  <!-- glass main card -->
+  <g filter="url(#cardShadow)">
+    <rect x="70" y="300" width="940" height="1260" rx="64" fill="url(#glass)" stroke="#ffffff" stroke-opacity="0.55"/>
   </g>
 
   <g>
-    <rect x="140" y="385" width="260" height="56" rx="28" fill="url(#pill)"/>
-    <text x="270" y="423" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#ffffff" font-weight="700" letter-spacing="2">
-      STUDYSIA
-    </text>
+    <rect x="130" y="370" width="300" height="64" rx="32" fill="url(#pill)"/>
+    <text x="280" y="412" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#ffffff" font-weight="800" letter-spacing="2">STUDYSIA</text>
   </g>
 
-  <text x="140" y="535" font-family="Arial, sans-serif" font-size="28" fill="#334155" font-weight="700">${escapeXml(meta)}</text>
+  <text x="130" y="520" font-family="Arial, sans-serif" font-size="30" fill="#0f172a" font-weight="900">${escapeXml(meta)}</text>
+  <text x="130" y="568" font-family="Arial, sans-serif" font-size="24" fill="#334155" font-weight="700" opacity="0.9">${escapeXml(meta2)}</text>
+
   ${homologue ? `<g>
-    <rect x="140" y="565" width="210" height="52" rx="26" fill="#d1fae5"/>
-    <text x="245" y="600" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#047857" font-weight="700">Homologué</text>
+    <rect x="720" y="500" width="260" height="60" rx="30" fill="#0f172a" fill-opacity="0.86"/>
+    <circle cx="760" cy="530" r="12" fill="#34d399"/>
+    <path d="M754 530l6 6 12-15" fill="none" stroke="#0f172a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="850" y="539" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" fill="#ffffff" font-weight="800">Homologué</text>
   </g>` : ""}
 
-  <text x="140" y="720" font-family="Arial, sans-serif" font-size="74" fill="#0f172a" font-weight="800">${title}</text>
-
-  <text x="140" y="825" font-family="Arial, sans-serif" font-size="34" fill="#334155" font-weight="700">${inst}</text>
-  <text x="140" y="880" font-family="Arial, sans-serif" font-size="26" fill="#64748b">${escapeXml(place)}</text>
-
-  ${tuition ? `<g>
-    <rect x="140" y="980" width="800" height="92" rx="30" fill="#fff7ed" stroke="#ffe4cc"/>
-    <text x="170" y="1038" font-family="Arial, sans-serif" font-size="28" fill="#334155" font-weight="700">Coût</text>
-    <text x="300" y="1038" font-family="Arial, sans-serif" font-size="28" fill="#0f172a">${tuition}</text>
-  </g>` : ""}
+  <text x="130" y="720" font-family="Arial, sans-serif" font-size="76" fill="#0b1220" font-weight="900">
+    ${titleLines.map((ln, idx) => `<tspan x="130" dy="${idx === 0 ? 0 : 88}">${ln}</tspan>`).join("")}
+  </text>
 
   <g>
-    <rect x="140" y="1125" width="800" height="92" rx="30" fill="#fff7fa" stroke="#f5d7e4"/>
-    <text x="170" y="1183" font-family="Arial, sans-serif" font-size="28" fill="#334155" font-weight="700">Accès</text>
-    <text x="300" y="1183" font-family="Arial, sans-serif" font-size="28" fill="#0f172a">${escapeXml(program?.admission || "")}</text>
+    <rect x="130" y="980" width="820" height="110" rx="34" fill="#ffffff" fill-opacity="0.75" stroke="#ffffff" stroke-opacity="0.55"/>
+    <text x="170" y="1048" font-family="Arial, sans-serif" font-size="30" fill="#0f172a" font-weight="900">${inst}</text>
+    <text x="170" y="1088" font-family="Arial, sans-serif" font-size="24" fill="#334155" font-weight="700" opacity="0.85">${escapeXml(place)}</text>
   </g>
 
-  <text x="140" y="1510" font-family="Arial, sans-serif" font-size="22" fill="#94a3b8">
+  <g>
+    <rect x="130" y="1140" width="400" height="140" rx="38" fill="#0f172a" fill-opacity="0.88"/>
+    <text x="170" y="1200" font-family="Arial, sans-serif" font-size="24" fill="#ffffff" font-weight="800" opacity="0.92">Frais</text>
+    <text x="170" y="1252" font-family="Arial, sans-serif" font-size="28" fill="#ffffff" font-weight="900">${tuition ? tuition : "Sur demande"}</text>
+  </g>
+
+  <g>
+    <rect x="550" y="1140" width="400" height="140" rx="38" fill="#ffffff" fill-opacity="0.75" stroke="#ffffff" stroke-opacity="0.55"/>
+    <text x="590" y="1200" font-family="Arial, sans-serif" font-size="24" fill="#0f172a" font-weight="900">Admission</text>
+    <text x="590" y="1252" font-family="Arial, sans-serif" font-size="28" fill="#0f172a" font-weight="800">${admission}</text>
+  </g>
+
+  <g>
+    <rect x="130" y="1390" width="820" height="92" rx="46" fill="url(#pill)"/>
+    <text x="540" y="1450" text-anchor="middle" font-family="Arial, sans-serif" font-size="30" fill="#ffffff" font-weight="900">Voir l’offre</text>
+  </g>
+
+  <text x="130" y="1528" font-family="Arial, sans-serif" font-size="22" fill="#0f172a" opacity="0.65">
     Glissez pour voir les détails · studysia.com
   </text>
 </svg>`;
