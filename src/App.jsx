@@ -1082,11 +1082,11 @@ function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSel
   );
 
   return (
-    <div className="fixed inset-x-0 top-0 z-40 border-b border-[#f3dce2] bg-white/90 backdrop-blur-xl">
-      <div className="relative mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4 gap-y-2 px-4 py-3 lg:px-6">
+    <div className="app-topbar fixed inset-x-0 top-0 z-40 border-b border-[#f3dce2] bg-white/92 backdrop-blur-xl">
+      <div className="relative mx-auto flex h-full max-w-7xl items-center justify-between gap-2 px-3 lg:flex-wrap lg:gap-4 lg:gap-y-2 lg:px-6 lg:py-3">
         <button type="button" onClick={onGoHome} className="flex items-center">
-          <div className="flex h-16 w-[220px] items-center justify-center overflow-hidden sm:h-20 sm:w-[300px]">
-            <img src="/logo-studysia.jpg" alt="Studysia" className="h-full w-full object-cover" />
+          <div className="flex h-12 w-[150px] items-center justify-center overflow-hidden sm:h-16 sm:w-[220px] lg:h-20 lg:w-[300px]">
+            <img src="/logo-studysia.jpg" alt="Studysia" className="h-full w-full object-contain" />
           </div>
         </button>
 
@@ -1097,7 +1097,7 @@ function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSel
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-full border border-[#f0dde2] bg-white py-3 pl-11 pr-5 text-sm text-slate-900 outline-none"
+                className="w-full rounded-full border border-[#f0dde2] bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 outline-none lg:py-3 lg:pl-11 lg:pr-5"
                 placeholder="Que voulez-vous étudier ?"
               />
             </div>
@@ -1108,7 +1108,7 @@ function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSel
           </div>
         )}
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {activeTab === "feed" && (
             <div className="flex items-center gap-2 rounded-full border border-[#f0dde2] bg-white px-4 py-2 text-sm text-slate-700">
               <button onClick={onToggleSound} className="inline-flex items-center gap-2">
@@ -1128,7 +1128,7 @@ function TopBar({ activeTab, searchQuery, setSearchQuery, selectedFilter, setSel
               />
             </div>
           )}
-          <button onClick={() => setFilterOpen((v) => !v)} className="inline-flex items-center gap-2 rounded-full border border-[#f0dde2] bg-white px-4 py-2 text-sm text-slate-700 hover:bg-[#fff6f7]">
+          <button onClick={() => setFilterOpen((v) => !v)} className="inline-flex h-11 w-11 items-center justify-center gap-2 rounded-full border border-[#f0dde2] bg-white text-sm text-slate-700 hover:bg-[#fff6f7] sm:w-auto sm:px-4 sm:py-2">
             <Filter className="h-4 w-4" />
             <span className="hidden sm:inline">Filtrer</span>
           </button>
@@ -1394,7 +1394,7 @@ function InstitutionSlide({ item }) {
 
 function FeedSection({ item, onViewOffer }) {
   return (
-    <section className="h-screen snap-start snap-always">
+    <section className="mobile-feed-section snap-start snap-always">
       <div className="h-full overflow-hidden">
         <ProgramSlide item={item} onViewOffer={onViewOffer} />
       </div>
@@ -3059,18 +3059,18 @@ function BottomNav({ activeTab, setActiveTab, onPublishRequest, currentUser, onO
   ];
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#f2dde3] bg-white/95 backdrop-blur-xl">
-      <div className="mx-auto grid max-w-3xl grid-cols-5 px-2 py-2">
+    <div className="app-bottom-nav fixed inset-x-0 bottom-0 z-40 border-t border-[#f2dde3] bg-white/95 backdrop-blur-xl">
+      <div className="mx-auto grid h-full max-w-3xl grid-cols-5 px-2 py-1.5">
         {items.map(([key, Icon, label]) => (
           <button
             key={key}
             onClick={() => {
               setActiveTab(key);
             }}
-            className={`flex flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 ${activeTab === key ? "bg-[#fff4f6] text-slate-900" : "text-slate-500 hover:bg-[#fff8fa] hover:text-slate-900"}`}
+            className={`flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1 ${activeTab === key ? "bg-[#fff4f6] text-slate-900" : "text-slate-500 hover:bg-[#fff8fa] hover:text-slate-900"}`}
           >
-            <Icon className="h-4 w-4" />
-            <span className="text-[11px]">{fixText(label)}</span>
+            <Icon className="h-5 w-5" />
+            <span className="truncate text-[11px]">{fixText(label)}</span>
           </button>
         ))}
       </div>
@@ -3108,7 +3108,7 @@ function WelcomeHero({ onExplore, onReference }) {
   );
 }
 
-function HelpWidget() {
+function HelpWidget({ activeTab }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({
     nom: "",
@@ -3123,7 +3123,7 @@ function HelpWidget() {
   );
   const wa = `https://wa.me/${WHATSAPP_FALLBACK.replace(/\D/g, "")}?text=${text}`;
   return (
-    <div className="fixed bottom-20 right-4 z-50 sm:bottom-24">
+    <div className={`fixed bottom-20 right-4 z-50 sm:bottom-24 ${activeTab === "explore" ? "hidden lg:block" : ""}`}>
       <button onClick={() => setOpen((v) => !v)} className="rounded-full bg-slate-900 px-4 py-3 text-xs font-semibold text-white shadow-xl">
         Besoin d’aide pour choisir ?
       </button>
@@ -3475,7 +3475,7 @@ export default function AfrikArtsMarketplacePrototype() {
       )}
 
       {activeTab === "explore" && (
-        <main className="h-auto min-h-0 overflow-y-auto snap-y snap-mandatory scroll-smooth sm:h-screen">
+        <main className="mobile-feed-main overflow-y-auto snap-y snap-mandatory scroll-smooth">
           {filteredPrograms.map((item) => (
             <FeedSection key={item.id} item={item} onViewOffer={handleViewOffer} />
           ))}
@@ -3535,7 +3535,7 @@ export default function AfrikArtsMarketplacePrototype() {
         onRegisterUser={handleRegisterUser}
       />
       <PublishDrawer open={publishOpen} onClose={() => setPublishOpen(false)} currentUser={currentUser} />
-      <HelpWidget />
+      <HelpWidget activeTab={activeTab} />
       <GuidancePrompt
         open={showGuidancePrompt}
         onClose={() => setShowGuidancePrompt(false)}

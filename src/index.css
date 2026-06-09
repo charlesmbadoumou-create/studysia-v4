@@ -29,6 +29,52 @@ body {
     radial-gradient(1200px 600px at 12% -15%, #ffecf7 0%, transparent 56%),
     radial-gradient(900px 520px at 95% -20%, #fff6e4 0%, transparent 54%),
     #ffffff;
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app-topbar {
+  height: calc(76px + env(safe-area-inset-top, 0px));
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.app-bottom-nav {
+  height: calc(74px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.mobile-feed-main {
+  position: fixed;
+  inset-inline: 0;
+  top: calc(76px + env(safe-area-inset-top, 0px));
+  bottom: calc(74px + env(safe-area-inset-bottom, 0px));
+  height: auto;
+}
+
+.mobile-feed-section {
+  height: 100%;
+}
+
+@media (min-width: 1024px) {
+  .app-topbar {
+    height: auto;
+    padding-top: 0;
+  }
+
+  .app-bottom-nav {
+    height: 82px;
+    padding-bottom: 0;
+  }
+
+  .mobile-feed-main {
+    position: static;
+    height: 100vh;
+  }
+
+  .mobile-feed-section {
+    height: 100vh;
+  }
 }
 
 .brand-vivid .bg-slate-900 {
